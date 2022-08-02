@@ -1,83 +1,87 @@
 package org.SparkCQC
 
-import org.SparkCQC.ComparisonJoins.ComparisonJoins
-import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.{SparkConf, SparkContext}
+import org.SparkCQC.ComparisonJoins.ComparisonJoins
+
+import scala.collection.mutable
+import scala.util.control.Breaks.{break, breakable}
 
 /**
- * This is a test program for testing the following SQL query over a graph
- * select g2.src, g2.dst
- * from Graph g1, Graph g2, Graph g3, Graph g4, Graph g5,
- * (select src, count(*) as cnt from Graph group by src) as c1,
- * (select src, count(*) as cnt from Graph group by src) as c2,
- * (select dst, count(*) as cnt from Graph group by dst) as c3,
- * (select dst, count(*) as cnt from Graph group by dst) as c4
- * where g1.dst = g2.src and g2.dst = g3.src and g1.src = c1.src
- * and g3.dst = c2.src and c1.cnt < c2.cnt
- * and g4.dst = g2.src and g2.dst = g5.src and g4.src = c3.dst
- * and g5.dst = c4.dst and c3.cnt < c4.cnt
+ * This is a test program for testing the following SQL query
+ * SELECT H1.CK, H2.CK, COUNT(DISTINCT H1.SK)
+ * FROM Hold H1, Hold H2
+ * WHERE H1.SK = H2. SK and H1.CK <> H2.CK
+ * and H1.ST < H2.ET - interval '10' day
+ * and H2.ST < H1.ET - interval '10' day
+ * GROUP BY H1.CK, H2.CK
  */
 object Query8SparkCQC extends App {
+
 
   val conf = new SparkConf()
   conf.setAppName("Query8SparkCQC")
   val sc = new SparkContext(conf)
 
   val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
+  val format = new java.text.SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS")
 
-  val lines = sc.textFile("soc-Epinions1.txt")
-  val graph = lines.map(line => {
-    val temp = line.split("\\s+")
-    (temp(0).toInt, temp(1).toInt)
-  })
-  val reversedGraph = graph.map(x => (x._2, x._1))
-  graph.cache()
-  graph.count()
-  val frequency = graph.map(edge => (edge._1, 1)).reduceByKey((a, b) => a+b).cache()
-  frequency.count()
-  val frequency2 = graph.map(edge => (edge._2, 1)).reduceByKey((a, b) => a+b).cache()
-  frequency2.count()
-  val g = graph.map(x => (x._1, Array[Any](x._1, x._2))).cache()
-  val g1 = graph.join(frequency).map(x => (x._1, x._2._1, x._2._2)).map(x => (x._2, Array[Any](x._1, x._2, x._3))).cache()
-  val g3 = graph.join(frequency2).map(x => (x._1, x._2._1, x._2._2)).map(x => (x._2, Array[Any](x._1, x._2, x._3))).cache()
-  val g2 = reversedGraph.join(frequency).map(x => (x._2._1, x._1, x._2._2)).map(x => (x._1, Array[Any](x._1, x._2, x._3))).cache()
-  val g4 = reversedGraph.join(frequency2).map(x => (x._2._1, x._1, x._2._2)).map(x => (x._1, Array[Any](x._1, x._2, x._3))).cache()
-  g1.count()
-  g2.count()
-  g3.count()
-  g4.count()
+  val lines = sc.textFile("Holding.txt",1).coalesce(1)
 
-  def smaller(x : Int, y : Int) : Boolean = {
+  val db = lines.map(line => {
+    val temp = line.split("\\|")
+    (temp(0).toLong, temp(1), format.parse(temp(2)).getTime, format.parse(temp(3)).getTime)
+  }).coalesce(32)
+  db.cache()
+  val difference = 864000000L
+  val h1 = db.map(x => ((x._1, x._2), Array[Any](x._1, x._2, x._3, -x._4))).cache()
+  val h2 = db.map(x => ((x._1, x._2), Array[Any](x._1, x._2, x._4-difference,-x._3-difference))).cache()
+  spark.time(print(db.count()))
+
+
+  def smallerL(x : Long, y : Long) : Boolean = {
 
     if (x < y) true
     else false
   }
-
-  def larger(x : Int, y : Int) : Boolean = {
-    if (x > y) true
-    else false
-  }
-
   val C = new ComparisonJoins()
-  // g1CoGroup Schema (g1.SRC, g1.DST, c1.CNT)
-  val g1Max = g1.reduceByKey((x, y) => if (x(2).asInstanceOf[Int] < y(2).asInstanceOf[Int]) x else y)
-  //val g1Max = C.getMinimal(g1, 2, smaller)
-    val g2Max = g2.reduceByKey((x, y) => if (x(2).asInstanceOf[Int] > y(2).asInstanceOf[Int]) x else y)
-  val g3Max = g3.reduceByKey((x, y) => if (x(2).asInstanceOf[Int] < y(2).asInstanceOf[Int]) x else y)
-  val g4Max = g4.reduceByKey((x, y) => if (x(2).asInstanceOf[Int] > y(2).asInstanceOf[Int]) x else y)
-  val semiJoin1 = g.join(g1Max).map(x => (x._2._1(1).asInstanceOf[Int], (x._2._1, x._2._2(2))))
-  val semiJoin2 = semiJoin1.join(g2Max).map(x =>
-    (x._2._1._1(0), (x._2._1._1, x._2._1._2, x._2._2(2)))
-  ).filter(x => smaller(x._2._2.asInstanceOf[Int], x._2._3.asInstanceOf[Int]))
-    .map(x=> (x._1.asInstanceOf[Int], x._2._1))
-  val semiJoin3 = semiJoin2.join(g3Max).map(x => (x._2._1(1).asInstanceOf[Int], (x._2._1, x._2._2(2))))
-  val result = semiJoin3.join(g4Max).map(x =>
-    (x._2._1._1(0), (x._2._1._1, x._2._1._2, x._2._2(2)))
-  ).filter(x => smaller(x._2._2.asInstanceOf[Int], x._2._3.asInstanceOf[Int]))
-    .map(x=> (x._1.asInstanceOf[Int], x._2._1))
+  val h1CoGroup = C.groupBy(h1, 2, 3, smallerL(_,_), smallerL(_,_)).map(x => (x._1._2, x))
+    .groupByKey()
+  val h2coGroup = h2.groupByKey().map(x => (x._1._2, x)).groupByKey()
 
-  spark.time(print(result.count()))
+  val result = h1CoGroup.cogroup(h2coGroup).mapPartitions(x => {
+    val temp = new mutable.HashMap[(Long, Long), Int]()
+    for (i <- x) {
+      if (i._2._1.nonEmpty && i._2._2.nonEmpty) {
+        if (i._2._1.size != 1 || i._2._2.size != 1) throw new Exception(s"Size error! ${i._2._1.size}, ${i._2._2.size}"  )
+        val leftiter = i._2._1.head
+        val rightiter = i._2._2.head
+        for (j <- leftiter) {
+            for (k <- rightiter) {
+              breakable {
+                if (k._1._1 != j._1._1) {
+                  for (k1 <- k._2) {
+                    if (j._2.exists(k1(2).asInstanceOf[Long], k1(3).asInstanceOf[Long])) {
+                      val t = (j._1._1, k._1._1)
+                      val l = temp.getOrElse(t, 0)
+                      temp.put(t, l + 1)
+                      break
+                    }
+                  }
+                }
+              }
+          }
+        }
+      }
+    }
+    temp.toIterator
+  })
+
+
+
+  spark.time(println(result.reduceByKey((x, y) => x+y).count()))
+
+
   println("First SparkContext:")
   println("APP Name :" + spark.sparkContext.appName)
   println("Deploy Mode :" + spark.sparkContext.deployMode)

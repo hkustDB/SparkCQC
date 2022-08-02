@@ -6,7 +6,7 @@ import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 
 /**
  * This is a test program for testing the following SQL query
- * SELECT * FROM Trade T1, Trade T2, Trade T3
+ * SELECT DISTINCT T1.T_CA_ID, T1.T_S_SYMB FROM Trade T1, Trade T2, Trade T3
  * WHERE T1.CA_ID = T2.CA_ID
  * and T1.S_SYMB = T2.S_SYMB
  * and T2.CA_ID = T3.CA_ID
@@ -17,7 +17,7 @@ import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 object Query7SparkCQC extends App {
 
   val conf = new SparkConf()
-  conf.setAppName("Query5SparkCQC Q7")
+  conf.setAppName("Query7SparkCQC")
   val sc = new SparkContext(conf)
 
   val spark = SparkSession.builder.config(sc.getConf).getOrCreate()

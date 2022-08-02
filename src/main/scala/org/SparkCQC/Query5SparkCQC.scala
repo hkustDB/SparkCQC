@@ -1,18 +1,22 @@
 package org.SparkCQC
 
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
-import org.SparkCQC.ComparisonJoins._
+import org.SparkCQC.ComparisonJoins.ComparisonJoins
+import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
+import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.{SparkConf, SparkContext}
 
 /**
- * This is a test program for testing the following SQL query
- * SELECT * FROM Trade T1, Trade T2
- * WHERE T1.TT = "BUY" and T2.TT = "SALE"
- * and T1.CA_ID = T2.CA_ID
- * and T1.S_SYBM = T2.S_SYMB
- * and T1.T_DTS <= T2.T_DTS
- * and T1.T_DTS + interval '90' day >= T2.T_DTS
- * and T1.T_TRADE_PRICE*1.2 < T2.T_TRADE_PRICE
+ * This is a test program for testing the following SQL query over a graph
+ * select g2.src, g2.dst
+ * from Graph g1, Graph g2, Graph g3, Graph g4, Graph g5,
+ * (select src, count(*) as cnt from Graph group by src) as c1,
+ * (select src, count(*) as cnt from Graph group by src) as c2,
+ * (select dst, count(*) as cnt from Graph group by dst) as c3,
+ * (select dst, count(*) as cnt from Graph group by dst) as c4
+ * where g1.dst = g2.src and g2.dst = g3.src and g1.src = c1.src
+ * and g3.dst = c2.src and c1.cnt < c2.cnt
+ * and g4.dst = g2.src and g2.dst = g5.src and g4.src = c3.dst
+ * and g5.dst = c4.dst and c3.cnt < c4.cnt
  */
 object Query5SparkCQC extends App {
 
@@ -21,118 +25,59 @@ object Query5SparkCQC extends App {
   val sc = new SparkContext(conf)
 
   val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
-  val format = new java.text.SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS")
-  val lines = sc.textFile("Trade.txt")
 
+  val lines = sc.textFile("soc-Epinions1.txt")
+  val graph = lines.map(line => {
+    val temp = line.split("\\s+")
+    (temp(0).toInt, temp(1).toInt)
+  })
+  val reversedGraph = graph.map(x => (x._2, x._1))
+  graph.cache()
+  graph.count()
+  val frequency = graph.map(edge => (edge._1, 1)).reduceByKey((a, b) => a+b).cache()
+  frequency.count()
+  val frequency2 = graph.map(edge => (edge._2, 1)).reduceByKey((a, b) => a+b).cache()
+  frequency2.count()
+  val g = graph.map(x => (x._1, Array[Any](x._1, x._2))).cache()
+  val g1 = graph.join(frequency).map(x => (x._1, x._2._1, x._2._2)).map(x => (x._2, Array[Any](x._1, x._2, x._3))).cache()
+  val g3 = graph.join(frequency2).map(x => (x._1, x._2._1, x._2._2)).map(x => (x._2, Array[Any](x._1, x._2, x._3))).cache()
+  val g2 = reversedGraph.join(frequency).map(x => (x._2._1, x._1, x._2._2)).map(x => (x._1, Array[Any](x._1, x._2, x._3))).cache()
+  val g4 = reversedGraph.join(frequency2).map(x => (x._2._1, x._1, x._2._2)).map(x => (x._1, Array[Any](x._1, x._2, x._3))).cache()
+  g1.count()
+  g2.count()
+  g3.count()
+  g4.count()
 
-  val partitioner = new HashPartitioner(32)
+  def smaller(x : Int, y : Int) : Boolean = {
 
-  val dbs = sc.textFile("TradeS.txt").coalesce(32).map(line => {
-    val temp = line.split("\\|")
-    ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble))
-  }).partitionBy(partitioner).cache()
+    if (x < y) true
+    else false
+  }
 
-  val dbb = sc.textFile("TradeB.txt").coalesce(32).map(line => {
-    val temp = line.split("\\|")
-    ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble))
-  }).partitionBy(partitioner).cache()
-
-  spark.time(println(dbb.count()))
-  spark.time(println(dbs.count()))
-
-  def largerL(x: Long, y: Long): Boolean = {
-
+  def larger(x : Int, y : Int) : Boolean = {
     if (x > y) true
     else false
   }
 
-  def smallerL(x: Long, y: Long): Boolean = {
-
-    if (x < y) true
-    else false
-  }
-
-  def smallerD(x: Double, y: Double): Boolean = {
-    if (x < y) true
-    else false
-  }
-
   val C = new ComparisonJoins()
+  // g1CoGroup Schema (g1.SRC, g1.DST, c1.CNT)
+  val g1Max = g1.reduceByKey((x, y) => if (x(2).asInstanceOf[Int] < y(2).asInstanceOf[Int]) x else y)
+  //val g1Max = C.getMinimal(g1, 2, smaller)
+    val g2Max = g2.reduceByKey((x, y) => if (x(2).asInstanceOf[Int] > y(2).asInstanceOf[Int]) x else y)
+  val g3Max = g3.reduceByKey((x, y) => if (x(2).asInstanceOf[Int] < y(2).asInstanceOf[Int]) x else y)
+  val g4Max = g4.reduceByKey((x, y) => if (x(2).asInstanceOf[Int] > y(2).asInstanceOf[Int]) x else y)
+  val semiJoin1 = g.join(g1Max).map(x => (x._2._1(1).asInstanceOf[Int], (x._2._1, x._2._2(2))))
+  val semiJoin2 = semiJoin1.join(g2Max).map(x =>
+    (x._2._1._1(0), (x._2._1._1, x._2._1._2, x._2._2(2)))
+  ).filter(x => smaller(x._2._2.asInstanceOf[Int], x._2._3.asInstanceOf[Int]))
+    .map(x=> (x._1.asInstanceOf[Int], x._2._1))
+  val semiJoin3 = semiJoin2.join(g3Max).map(x => (x._2._1(1).asInstanceOf[Int], (x._2._1, x._2._2(2))))
+  val result = semiJoin3.join(g4Max).map(x =>
+    (x._2._1._1(0), (x._2._1._1, x._2._1._2, x._2._2(2)))
+  ).filter(x => smaller(x._2._2.asInstanceOf[Int], x._2._3.asInstanceOf[Int]))
+    .map(x=> (x._1.asInstanceOf[Int], x._2._1))
 
-
-  val dbbMax = C.getMinimal(dbb, 1, largerL).cache()
-
-  val dbsSemiJoin = C.enumerationnp(dbbMax, dbs, Array(), Array(0, 1, 2, 3, 4), (1, 0), (2, 1), largerL(_, _)).cache()
-
-  val result = dbb.cogroup(dbsSemiJoin).flatMapValues(x => {
-    new Iterator[Array[Any]] {
-      private var hasOutput = true
-      private var iterA: Iterator[Array[Any]] = _
-      private var iterB: Iterator[Array[Any]] = _
-      private var i: Array[Any] = _
-      private var initial = false
-      private var nextOutput: Array[Any] = null
-
-      override def hasNext: Boolean = {
-        if (nextOutput != null) return true
-        if (!initial) {
-          hasOutput = false
-          initial = true
-          iterA = x._1.toIterator
-          while (!hasOutput && (iterA.hasNext || iterB.hasNext)) {
-            i = iterA.next
-            iterB = x._2.toIterator
-            while (!hasOutput && iterB.hasNext) {
-              val j = iterB.next
-              if (largerL(i(1).asInstanceOf[Long], j(1).asInstanceOf[Long]))
-                if (smallerD(i(4).asInstanceOf[Double], j(4).asInstanceOf[Double]) && smallerL(i(1).asInstanceOf[Long] - 7776000000L, j(1).asInstanceOf[Long])) {
-                  nextOutput = Array(i(0), i(2), i(3), j(0), j(2), j(3))
-                  hasOutput = true
-                  return true
-                }
-            }
-          }
-        }
-        if (hasOutput) {
-          hasOutput = false
-          while (!hasOutput && (iterA.hasNext || iterB.hasNext)) {
-            if (!iterB.hasNext) {
-              iterB = x._2.toIterator
-              i = iterA.next()
-            }
-            while (!hasOutput && iterB.hasNext) {
-              val j = iterB.next
-              if (largerL(i(1).asInstanceOf[Long], j(1).asInstanceOf[Long]))
-                if (smallerD(i(4).asInstanceOf[Double], j(4).asInstanceOf[Double]) && smallerL(i(1).asInstanceOf[Long] - 7776000000L, j(1).asInstanceOf[Long])) {
-                  nextOutput = Array(i(0), i(2), i(3), j(0), j(2), j(3))
-                  hasOutput = true
-                  return true
-                }
-            }
-          }
-          hasOutput
-        } else false
-      }
-
-      override def next(): Array[Any] = {
-        if (!initial) {
-          if (this.hasNext) {
-            val t = nextOutput
-            nextOutput = null
-            t
-          } else {
-            null
-          }
-        } else {
-          val t = nextOutput
-          nextOutput = null
-          t
-        }
-      }
-    }
-  })
-  spark.time(println(result.count()))
-
+  spark.time(print(result.count()))
   println("First SparkContext:")
   println("APP Name :" + spark.sparkContext.appName)
   println("Deploy Mode :" + spark.sparkContext.deployMode)
