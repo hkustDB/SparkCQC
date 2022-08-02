@@ -7,22 +7,24 @@ import org.apache.spark.{SparkConf, SparkContext}
  * This is a test program for testing the graph loading performance
  * for setting the lower bound of the running times.
  */
-object GraphLoading extends App {
-  val conf = new SparkConf()
-  conf.setAppName("GraphLoading")
+object GraphLoading {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf()
+    conf.setAppName("GraphLoading")
 
-  val sc = new SparkContext(conf)
+    val sc = new SparkContext(conf)
+    val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
 
-  val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
+    assert(args.length == 1)
+    val path = args(0)
+    println(s"load graph ${path}")
+    val graph = sc.textFile(path)
 
-  // Set the file path to the test file.
-  val graph = sc.textFile("Temporal.csv")
+    spark.time(graph.count())
+    println("APP Name :" + spark.sparkContext.appName)
+    println("Deploy Mode :" + spark.sparkContext.deployMode)
+    println("Master :" + spark.sparkContext.master)
 
-  spark.time(graph.count())
-  println("First SparkContext:")
-  println("APP Name :" + spark.sparkContext.appName)
-  println("Deploy Mode :" + spark.sparkContext.deployMode)
-  println("Master :" + spark.sparkContext.master)
-
-  spark.close()
+    spark.close()
+  }
 }
