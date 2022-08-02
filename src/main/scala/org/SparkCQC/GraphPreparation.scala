@@ -17,7 +17,7 @@ object GraphPreparation {
     val sc = new SparkContext(conf)
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
 
-    assert(args.length == 1)
+    assert(args.length >= 1)
     val path = args(0)
     println(s"prepare for graphs in ${path}")
     listGraphFiles(args(0)).foreach(name => {

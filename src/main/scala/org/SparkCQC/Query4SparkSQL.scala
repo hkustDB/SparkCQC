@@ -13,62 +13,63 @@ import org.apache.spark.{SparkConf, SparkContext}
  * where g1.dst = g2.src and g2.dst = g3.src and g1.src = c1.src
  * and g3.dst = c2.src and c1.cnt < c2.cnt
  */
-object Query4SparkSQL extends App {
+object Query4SparkSQL {
+  def main(args: Array[String]): Unit = {
+    val conf = new SparkConf()
+    conf.setAppName("Query4SparkSQL")
+    val sc = new SparkContext(conf)
+
+    val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
+
+    assert(args.length >= 2)
+    val path = args(0)
+    val file = args(1)
+
+    val lines = sc.textFile(s"${path}/${file}")
+    val graph = lines.map(line => {
+      val temp = line.split("\\s+")
+      (temp(0).toInt, temp(1).toInt)
+    })
+    graph.cache()
+    graph.count()
+    val frequency = graph.map(edge => (edge._1, 1)).reduceByKey((a, b) => a + b).cache()
+    frequency.count()
 
 
-  val conf = new SparkConf()
-  conf.setAppName("Query4SparkSQL")
-  val sc = new SparkContext(conf)
+    val graphSchemaString = "src dst"
+    val graphFields = graphSchemaString.split(" ")
+        .map(fieldName => StructField(fieldName, IntegerType, nullable = false))
+    val graphSchema = StructType(graphFields)
 
-  val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
+    val countSchemaString = "src cnt"
+    val countFields = countSchemaString.split(" ")
+        .map(fieldName => StructField(fieldName, IntegerType, nullable = false))
+    val countSchema = StructType(countFields)
 
-  val lines = sc.textFile("soc-Epinions1.txt")
-  val graph = lines.map(line => {
-    val temp = line.split("\\s+")
-    (temp(0).toInt, temp(1).toInt)
-  })
-  graph.cache()
-  graph.count()
-  val frequency = graph.map(edge => (edge._1, 1)).reduceByKey((a, b) => a+b).cache()
-  frequency.count()
+    val graphRow = graph.map(attributes => Row(attributes._1, attributes._2))
+    val countRow = frequency.map(attributes => Row(attributes._1, attributes._2))
 
+    val graphDF = spark.createDataFrame(graphRow, graphSchema)
+    val countDF = spark.createDataFrame(countRow, countSchema)
 
+    graphDF.createOrReplaceTempView("Graph")
+    countDF.createOrReplaceTempView("countDF")
 
-
-  val graphSchemaString = "src dst"
-  val graphFields = graphSchemaString.split(" ")
-    .map(fieldName => StructField(fieldName, IntegerType, nullable = false))
-  val graphSchema = StructType(graphFields)
-
-  val countSchemaString = "src cnt"
-  val countFields = countSchemaString.split(" ")
-    .map(fieldName => StructField(fieldName, IntegerType, nullable = false))
-  val countSchema = StructType(countFields)
-
-  val graphRow = graph.map(attributes => Row(attributes._1, attributes._2))
-  val countRow = frequency.map(attributes => Row(attributes._1, attributes._2))
-
-  val graphDF = spark.createDataFrame(graphRow, graphSchema)
-  val countDF = spark.createDataFrame(countRow, countSchema)
-
-  graphDF.createOrReplaceTempView("Graph")
-  countDF.createOrReplaceTempView("countDF")
-
-  graphDF.persist()
-  countDF.persist()
-  graphDF.count()
+    graphDF.persist()
+    countDF.persist()
+    graphDF.count()
 
 
-  val resultDF = spark.sql(
-    "SELECT distinct(g3.src, g3.dst) From Graph g1, Graph g2, Graph g3, countDF c1, countDF c2 " +
-      "where g1.dst = g2.src and g2.dst = g3.src and c1.src = g1.src and c2.src = g3.dst and c1.cnt < c2.cnt")
+    val resultDF = spark.sql(
+      "SELECT distinct(g3.src, g3.dst) From Graph g1, Graph g2, Graph g3, countDF c1, countDF c2 " +
+          "where g1.dst = g2.src and g2.dst = g3.src and c1.src = g1.src and c2.src = g3.dst and c1.cnt < c2.cnt")
 
-  spark.time(println(resultDF.count()))
-  resultDF.explain("cost")
-  println("First SparkContext:")
-  println("APP Name :" + spark.sparkContext.appName)
-  println("Deploy Mode :" + spark.sparkContext.deployMode)
-  println("Master :" + spark.sparkContext.master)
+    spark.time(println(resultDF.count()))
 
-  spark.close()
+    println("APP Name :" + spark.sparkContext.appName)
+    println("Deploy Mode :" + spark.sparkContext.deployMode)
+    println("Master :" + spark.sparkContext.master)
+
+    spark.close()
+  }
 }
