@@ -16,7 +16,7 @@ import scala.collection.mutable.ListBuffer
  * (select dst, count(*) as cnt from Graph group by dst) as c4,
  * where g1.dst = g2.src and g2.dst = g3.src and g1.src = c1.src
  * and g3.dst = c2.src and g3.dst = c4.dst and g2.src = c3.src
- * and c1.cnt < c2.cnt and c3.cnt < c4.cnt
+ * and c1.cnt + k < c2.cnt and c3.cnt < c4.cnt
  */
 object Query3SparkCQCPlan2 {
   def main(args: Array[String]): Unit = {
@@ -28,9 +28,11 @@ object Query3SparkCQCPlan2 {
 
     sc.defaultParallelism
 
-    assert(args.length == 3)
+    assert(args.length == 4)
     val path = args(0)
     val file = args(1)
+    val saveAsTextFilePath = args(2)
+    val k = args(3).toInt
 
     val lines = sc.textFile(s"${path}/${file}")
 
@@ -44,9 +46,10 @@ object Query3SparkCQCPlan2 {
     spark.time(println(graph.count()))
     val frequency = graph.map(edge => (edge._1, 1)).reduceByKey((a, b) => a + b).cache()
     val frequency0 = graph.map(edge => (edge._2(1).asInstanceOf[Int], 1)).reduceByKey((a, b) => a + b).cache()
+    val frequencyAddK = frequency.mapValues(t => t + k)
 
     val g1 = graph.join(frequency).map(x => (x._1, Array[Any](x._2._1(0), x._2._1(1), x._2._2))).cache()
-
+    val g1AddK = graph.join(frequencyAddK).map(x => (x._1, Array[Any](x._2._1(0), x._2._1(1), x._2._2))).cache()
     // g2 Schema (g3.src, g3.dst, c4.cnt, c2.cnt)
     val g2 = graphinvert.join(frequency0)
         .map(x => (x._1.asInstanceOf[Int], Array[Any](x._2._1(0), x._2._1(1), x._2._2))).join(frequency)
@@ -72,11 +75,12 @@ object Query3SparkCQCPlan2 {
     val g3Max = g3CoGroup.mapValues(x => x.toSmall)
     // g2CoGroup Schema (g2.SRC, g2.DST, c3.CNT, c2.CNT)
     val g1reverse = g1.map(x => (x._2(1).asInstanceOf[Int], x._2)).cache()
+    val g1AddKreverse = g1AddK.map(x => (x._2(1).asInstanceOf[Int], x._2)).cache()
 
     val g2CoGroup = C semijoin(g1reverse, g3Max, 2, larger(_, _), 0)
     g2CoGroup.cache()
     val g2Max = C semijoinSortToMax (g2CoGroup)
-    val g1semiJoin = g1reverse.cogroup(g2Max).flatMap(x => {
+    val g1semiJoin = g1AddKreverse.cogroup(g2Max).flatMap(x => {
       val result = ListBuffer[(Int, Array[Any])]()
       for (i <- x._2._1) {
         if (x._2._2.size > 1) throw new Exception("Not unique!")

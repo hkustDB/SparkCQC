@@ -14,7 +14,7 @@ import org.SparkCQC.ComparisonJoins._
  * (select dst, count(*) as cnt from Graph group by dst) as c4,
  * where g1.dst = g2.src and g2.dst = g3.src and g1.src = c1.src
  * and g3.dst = c2.src and g3.dst = c4.dst and g2.src = c3.src
- * and c1.cnt < c2.cnt and c3.cnt < c4.cnt
+ * and c1.cnt + k < c2.cnt and c3.cnt < c4.cnt
  */
 object Query3SparkCQCPlan3 {
   def main(args: Array[String]): Unit = {
@@ -27,9 +27,11 @@ object Query3SparkCQCPlan3 {
 
     sc.defaultParallelism
 
-    assert(args.length == 3)
+    assert(args.length == 4)
     val path = args(0)
     val file = args(1)
+    val saveAsTextFilePath = args(2)
+    val k = args(3).toInt
 
     val lines = sc.textFile(s"${path}/${file}")
 
@@ -43,9 +45,10 @@ object Query3SparkCQCPlan3 {
     spark.time(graph.count())
     val frequency = graph.map(edge => (edge._1, 1)).reduceByKey((a, b) => a + b).cache()
     val frequency0 = graph.map(edge => (edge._2(1).asInstanceOf[Int], 1)).reduceByKey((a, b) => a + b).cache()
-
+    val frequencyAddK = frequency.mapValues(t => t + k)
 
     val g1 = graph.join(frequency).map(x => (x._1, Array[Any](x._2._1(0), x._2._1(1), x._2._2))).cache()
+    val g1AddK = graph.join(frequencyAddK).map(x => (x._1, Array[Any](x._2._1(0), x._2._1(1), x._2._2))).cache()
 
     // g2 Schema (g3.src, g3.dst, c4.cnt, c2.cnt)
     val g2 = graphinvert.join(frequency0)
@@ -61,7 +64,7 @@ object Query3SparkCQCPlan3 {
 
     val C = new ComparisonJoins()
     // g1CoGroup Schema (g1.SRC, g1.DST, c1.CNT)
-    val g1CoGroup = C groupBy(g1, 2, smaller, 1)
+    val g1CoGroup = C groupBy(g1AddK, 2, smaller, 1)
 
     g1CoGroup.cache()
     // g1Max Schema (g1.DST, c1.CNT)

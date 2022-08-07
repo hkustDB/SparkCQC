@@ -11,7 +11,7 @@ import org.apache.spark.{SparkConf, SparkContext}
  * (select src, count(*) as cnt from Graph group by src) as c1,
  * (select src, count(*) as cnt from Graph group by src) as c2
  * where g1.dst = g2.src and g2.dst = g3.src and g1.src = c1.src
- * and g3.dst = c2.src and c1.cnt < c2.cnt
+ * and g3.dst = c2.src and c1.cnt + k < c2.cnt
  */
 object Query1SparkCQC {
   def main(args: Array[String]): Unit = {
@@ -23,10 +23,11 @@ object Query1SparkCQC {
 
     sc.defaultParallelism
 
-    assert(args.length == 3)
+    assert(args.length == 4)
     val path = args(0)
     val file = args(1)
     val saveAsTextFilePath = args(2)
+    val k = args(3).toInt
 
     // Modify to the correct input file path
     val lines = sc.textFile(s"${path}/${file}")
@@ -65,15 +66,15 @@ object Query1SparkCQC {
     // g3Max Schema (g3.DST, c1.CNT)
     val g3Max = C semijoinSortToMax(g3CoGroup)
     // cnt Schema (g3.DST, c2.CNT)
-    val cnt = C enumeration1 (g3Max, frequency2, Array(), Array(0, 1), (1, 0), (2, 1), 0, smaller)
+    val cnt = C enumeration1 (g3Max, frequency2, Array(), Array(0, 1), (1, 0), (2, 1), 0, (x: Int, y: Int) => smaller(x + k, y))
     // enum1 Schema (g3.DST, c2.CNT, g3.SRC)
-    val enum1 = C enumeration (cnt, g3CoGroup, Array(0, 1), Array(0), (2, 2), (1, 1), 2, smaller(_,_))
+    val enum1 = C enumeration (cnt, g3CoGroup, Array(0, 1), Array(0), (2, 2), (1, 1), 2, (x: Int, y: Int) => smaller(x + k, y))
     enum1.cache()
     // enum2 Schema (g3.DST, c2.CNT, g3.SRC, g2.SRC)
-    val enum2 = C enumeration (enum1, g2CoGroup, Array(0, 1, 2), Array(0), (2, 2), (1, 1), 3, smaller(_,_))
+    val enum2 = C enumeration (enum1, g2CoGroup, Array(0, 1, 2), Array(0), (2, 2), (1, 1), 3, (x: Int, y: Int) => smaller(x + k, y))
     enum2.cache()
     // enum3 Schema (g3.DST, c2.CNT, g3.SRC, g2.SRC, g1.SRC, c1.CNT)
-    val enum3 = C enumeration (enum2, g1CoGroup, Array(0, 1, 2, 3), Array(0, 2), (2, 2), (1, 1), 4, smaller(_,_))
+    val enum3 = C enumeration (enum2, g1CoGroup, Array(0, 1, 2, 3), Array(0, 2), (2, 2), (1, 1), 4, (x: Int, y: Int) => smaller(x + k, y))
 
     if (saveAsTextFilePath.nonEmpty)
       enum3.saveAsTextFile(saveAsTextFilePath)

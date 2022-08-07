@@ -23,7 +23,7 @@ object Query4SparkCQC {
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
 
     sc.defaultParallelism
-    assert(args.length == 3)
+    assert(args.length == 4)
     val path = args(0)
     val file = args(1)
     val saveAsTextFilePath = args(2)

@@ -11,7 +11,7 @@ import org.SparkCQC.ComparisonJoins._
  * where g1.src = g3.dst and g2.src = g1.dst and g3.src=g2.dst
  * and g4.src = g6.dst and g5.src = g4.dst and g6.src = g5.dst
  * and g1.dst = g7.src and g4.src = g7.dst and
- * g1.weight*g2.weight*g3.weight < g4.weight*g5.weight*g6.weight
+ * g1.weight*g2.weight*g3.weight + k < g4.weight*g5.weight*g6.weight
  */
 object Query2SparkCQC {
   def main(args: Array[String]): Unit = {
@@ -23,16 +23,16 @@ object Query2SparkCQC {
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
     sc.defaultParallelism
 
-    assert(args.length == 3)
+    assert(args.length == 4)
     val path = args(0)
     val file = args(1)
     val saveAsTextFilePath = args(2)
+    val k = args(3).toInt
 
     // Modify to the correct input file path
     val lines = sc.textFile(s"${path}/${file}")
 
     def smaller(x: Int, y: Int): Boolean = {
-
       if (x < y) true
       else false
     }
@@ -70,12 +70,12 @@ object Query2SparkCQC {
     triangleG1.cache()
     val triangleG1Max = C.semijoinSortToMax(triangleG1)
     // Schema B, Prod(Weight)
-    val cnt = C.enumeration1(triangleG1Max, triangleA, Array(), Array(0, 1, 2, 3), (1, 0), (2, 3), 0, smaller)
+    val cnt = C.enumeration1(triangleG1Max, triangleA, Array(), Array(0, 1, 2, 3), (1, 0), (2, 3), 0, (x: Int, y: Int) => smaller(x + k, y))
     spark.time(println(cnt.count()))
-    val enum1 = C.enumeration(cnt, triangleG1, Array(0, 1, 2, 3), Array(0), (2, 2), (1, 3), 4, smaller(_, _))
+    val enum1 = C.enumeration(cnt, triangleG1, Array(0, 1, 2, 3), Array(0), (2, 2), (1, 3), 4, (x: Int, y: Int) => smaller(x + k, y))
     spark.time(println(enum1.count()))
 
-    val enum2 = C.enumeration(enum1, triangleBGroup, Array(0, 1, 2, 3), Array(0, 1, 2, 3), (2, 3), (1, 3), 0, smaller(_, _))
+    val enum2 = C.enumeration(enum1, triangleBGroup, Array(0, 1, 2, 3), Array(0, 1, 2, 3), (2, 3), (1, 3), 0, (x: Int, y: Int) => smaller(x + k, y))
 
     if (saveAsTextFilePath.nonEmpty)
       enum2.saveAsTextFile(saveAsTextFilePath)

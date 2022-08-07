@@ -11,7 +11,7 @@ import org.apache.spark.{SparkConf, SparkContext}
  * where g1.src = g3.dst and g2.src = g1.dst and g3.src=g2.dst
  * and g4.src = g6.dst and g5.src = g4.dst and g6.src = g5.dst
  * and g1.dst = g7.src and g4.src = g7.dst and
- * g1.weight*g2.weight*g3.weight < g4.weight*g5.weight*g6.weight
+ * g1.weight*g2.weight*g3.weight + k < g4.weight*g5.weight*g6.weight
  */
 object Query2SparkSQL {
   def main(args: Array[String]): Unit = {
@@ -24,6 +24,7 @@ object Query2SparkSQL {
     assert(args.length >= 2)
     val path = args(0)
     val file = args(1)
+    val k = args(2).toInt
 
     val lines = sc.textFile(s"${path}/${file}")
     val graph = lines.map(line => {
@@ -53,7 +54,7 @@ object Query2SparkSQL {
           "From Graph g1, Graph g2, Graph g3, Graph g4, Graph g5, Graph g6, Graph g7 " +
           "where g1.src = g3.dst and g2.src = g1.dst and g3.src=g2.dst " +
           "and g4.src = g6.dst and g5.src = g4.dst and g6.src = g5.dst " +
-          "and g1.dst = g7.src and g4.src = g7.dst and g1.weight*g2.weight*g3.weight < g4.weight*g5.weight*g6.weight")
+          s"and g1.dst = g7.src and g4.src = g7.dst and g1.weight*g2.weight*g3.weight + ${k} < g4.weight*g5.weight*g6.weight")
 
     spark.time(println(resultDF.count()))
     println("APP Name :" + spark.sparkContext.appName)

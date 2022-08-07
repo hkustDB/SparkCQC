@@ -11,7 +11,7 @@ import org.apache.spark.{SparkConf, SparkContext}
  * (select src, count(*) as cnt from Graph group by src) as c1,
  * (select src, count(*) as cnt from Graph group by src) as c2
  * where g1.dst = g2.src and g2.dst = g3.src and g1.src = c1.src
- * and g3.dst = c2.src and c1.cnt < c2.cnt
+ * and g3.dst = c2.src and c1.cnt + k < c2.cnt
  */
 object Query1SparkSQL {
   def main(args: Array[String]): Unit = {
@@ -21,9 +21,10 @@ object Query1SparkSQL {
 
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
 
-    assert(args.length >= 2)
+    assert(args.length >= 3)
     val path = args(0)
     val file = args(1)
+    val k = args(2).toInt
 
     val lines = sc.textFile(s"${path}/${file}")
     val graph = lines.map(line => {
@@ -59,8 +60,8 @@ object Query1SparkSQL {
     graphDF.count()
 
     val resultDF = spark.sql(
-      "SELECT g1.src, g1.dst, g2.dst, g3.dst, c1.cnt, c2.cnt From Graph g1, Graph g2, Graph g3, countDF c1, countDF c2 " +
-          "where g1.dst = g2.src and g2.dst = g3.src and c1.src = g1.src and c2.src = g3.dst and c1.cnt < c2.cnt")
+      s"SELECT g1.src, g1.dst, g2.dst, g3.dst, c1.cnt, c2.cnt From Graph g1, Graph g2, Graph g3, countDF c1, countDF c2 " +
+          s"where g1.dst = g2.src and g2.dst = g3.src and c1.src = g1.src and c2.src = g3.dst and c1.cnt + ${k} < c2.cnt")
 
     spark.time(println(resultDF.count()))
     println("APP Name :" + spark.sparkContext.appName)
