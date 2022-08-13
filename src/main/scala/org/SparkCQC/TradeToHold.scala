@@ -12,6 +12,7 @@ import scala.io.Source
 object TradeToHold {
   def main(args: Array[String]): Unit = {
     val data = Source.fromFile(args(0))
+    val outputPath = args(1)
     val format = new java.text.SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS")
     val result = new mutable.HashMap[(Long, String), (Long, String, Long, Long, Long)]()
     val output = ArrayBuffer[(Long, String, Long, Long)]()
@@ -22,11 +23,10 @@ object TradeToHold {
     val tradeB = new ArrayBuffer[(String, String, String, String, String)]()
 
     var current = 0L
-
     for (line <- data.getLines()) {
       current += 1
-      if (current % 10000000 == 0)
-        println("processing " + current)
+      if (current % 1000000 == 0)
+        println("current = " + current)
 
       val temp = line.split("\\|")
       // T_ID, T_DTS, T_TT_ID, T_S_SYMB, T_TRADE_QTY, T_CA_ID, T_TRADE_PRICE
@@ -59,8 +59,8 @@ object TradeToHold {
       output.append((i._2._1, i._2._2, i._2._3, 4102329600000L))
     }
 
-    println("Holding.csv")
-    val writeF = new PrintWriter(new File("Holding.csv"))
+    println("creating holding.txt")
+    val writeF = new PrintWriter(new File(s"${outputPath}/holding.txt"))
     for (x <- output) {
       val startDate = new Date(x._3)
       val endDate = new Date(x._4)
@@ -71,11 +71,11 @@ object TradeToHold {
 
     writeF.close()
 
-    val tradeWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("/tmp/trade.txt")))
-    val tradeBWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("/tmp/tradeB.txt")))
-    val tradeSWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("/tmp/tradeS.txt")))
+    val tradeWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(s"${outputPath}/trade.txt")))
+    val tradeBWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(s"${outputPath}/tradeB.txt")))
+    val tradeSWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(s"${outputPath}/tradeS.txt")))
 
-    println("trade.txt")
+    println("creating trade.txt")
     for (t <- trade) {
       tradeWriter.write(s"${t._1}|${t._2}|${t._3}|${t._4}|${t._5}|${t._6}")
       tradeWriter.newLine()
@@ -83,7 +83,7 @@ object TradeToHold {
     tradeWriter.flush()
     tradeWriter.close()
 
-    println("tradeS.txt")
+    println("creating tradeS.txt")
     for (t <- tradeS) {
       tradeSWriter.write(s"${t._1}|${t._2}|${t._3}|${t._4}|${t._5}")
       tradeSWriter.newLine()
@@ -91,7 +91,7 @@ object TradeToHold {
     tradeSWriter.flush()
     tradeSWriter.close()
 
-    println("tradeB.txt")
+    println("creating tradeB.txt")
     for (t <- tradeB) {
       tradeBWriter.write(s"${t._1}|${t._2}|${t._3}|${t._4}|${t._5}")
       tradeBWriter.newLine()
