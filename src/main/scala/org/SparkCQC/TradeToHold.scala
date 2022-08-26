@@ -23,6 +23,9 @@ object TradeToHold {
     val tradeB = new ArrayBuffer[(String, String, String, String, String)]()
 
     var current = 0L
+    // T_S_SYMB map, T_S_SYMB -> a distinct long value
+    val t_s_symb_map = mutable.HashMap.empty[String, Long]
+    var t_s_symb_current_max = 1L
     for (line <- data.getLines()) {
       current += 1
       if (current % 1000000 == 0)
@@ -31,6 +34,11 @@ object TradeToHold {
       val temp = line.split("\\|")
       // T_ID, T_DTS, T_TT_ID, T_S_SYMB, T_TRADE_QTY, T_CA_ID, T_TRADE_PRICE
       val t = (temp(0).toLong, format.parse(temp(1)).getTime, temp(3), temp(5), temp(6).toLong, temp(8).toLong, temp(10).toDouble)
+      if (!t_s_symb_map.contains(t._4)) {
+        t_s_symb_map(t._4) = t_s_symb_current_max
+        t_s_symb_current_max += 1
+      }
+
       if (t._3.contains("B")) {
         val tempR: (Long, String, Long, Long, Long) = result.getOrElse((t._6, t._4), (t._6, t._4, t._2, -1, 0))
         result.put((t._6, t._4), (tempR._1, tempR._2, tempR._3, tempR._4, tempR._5 + t._5))
@@ -74,6 +82,7 @@ object TradeToHold {
     val tradeWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(s"${outputPath}/trade.txt")))
     val tradeBWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(s"${outputPath}/tradeB.txt")))
     val tradeSWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(s"${outputPath}/tradeS.txt")))
+    val tradeInWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(s"${outputPath}/trade.in")))
 
     println("creating trade.txt")
     for (t <- trade) {
@@ -98,5 +107,31 @@ object TradeToHold {
     }
     tradeBWriter.flush()
     tradeBWriter.close()
+
+    println("creating trade.in")
+    tradeInWriter.write("Relation TradeB")
+    tradeInWriter.newLine()
+    tradeInWriter.write("t_ca_id t_s_symb t_dts t_tradeprice")
+    tradeInWriter.newLine()
+    for (t <- tradeB) {
+      tradeInWriter.write(s"${t._4} ${t_s_symb_map(t._3)} ${t._2} ${t._5} 0")
+      tradeInWriter.newLine()
+    }
+    tradeInWriter.write("End of TradeB")
+    tradeInWriter.newLine()
+
+    tradeInWriter.write("Relation TradeS")
+    tradeInWriter.newLine()
+    tradeInWriter.write("t_ca_id t_s_symb t_dts t_tradeprice")
+    tradeInWriter.newLine()
+    for (t <- tradeS) {
+      tradeInWriter.write(s"${t._4} ${t_s_symb_map(t._3)} ${t._2} ${t._5} 0")
+      tradeInWriter.newLine()
+    }
+    tradeInWriter.write("End of TradeS")
+    tradeInWriter.newLine()
+
+    tradeInWriter.flush()
+    tradeInWriter.close()
   }
 }
