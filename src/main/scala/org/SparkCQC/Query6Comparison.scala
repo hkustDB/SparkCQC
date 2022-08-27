@@ -7,7 +7,7 @@ import org.SparkCQC.ComparisonJoins._
 object Query6Comparison {
     def main(args: Array[String]): Unit = {
         val conf = new SparkConf()
-        conf.setAppName("AnalyticQ3")
+        conf.setAppName("Query6Comparison")
         val sc = new SparkContext(conf)
 
         val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
@@ -44,9 +44,10 @@ object Query6Comparison {
         val dbbGroup = C.groupBy(dbb, 1, 4, smallerL, smallerD).cache()
         val dbbMax = dbbGroup.mapValues(x => x.toSmall).cache()
         val dbsemiJoin = C.semijoin(dbbMax, dbs, 1, 4, smallerL, smallerD).cache()
-        val result = C.enumeration(dbsemiJoin, dbbGroup, Array(0, 2, 3), Array(0, 2, 3), 1, 4, 0)
+        val result = C.enumeration(dbsemiJoin, dbbGroup, Array(0, 1, 2, 3), Array(0, 1, 2, 3), 1, 4, 0)
 
-        spark.time(print(result.count()))
+        val result2 = result.filter(t => (t._2(5).asInstanceOf[Long] + 7776000000L) > t._2(1).asInstanceOf[Long])
+        spark.time(print(result2.count()))
 
         println("APP Name :" + spark.sparkContext.appName)
         println("Deploy Mode :" + spark.sparkContext.deployMode)
