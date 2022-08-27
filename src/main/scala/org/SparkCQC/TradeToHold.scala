@@ -37,6 +37,8 @@ object TradeToHold {
       if (!t_s_symb_map.contains(t._4)) {
         t_s_symb_map(t._4) = t_s_symb_current_max
         t_s_symb_current_max += 1
+        if (t_s_symb_current_max % 100 == 0)
+          println("current T_S_SYMB = " + t._4)
       }
 
       if (t._3.contains("B")) {
@@ -114,7 +116,7 @@ object TradeToHold {
     tradeInWriter.write("t_ca_id t_s_symb t_dts t_tradeprice")
     tradeInWriter.newLine()
     for (t <- tradeB) {
-      tradeInWriter.write(s"${t._4} ${t_s_symb_map(t._3)} ${t._2} ${t._5} 0")
+      tradeInWriter.write(s"${t._4} ${t_s_symb_map(t._3)} ${t._2} ${t._5.toDouble * 1.2} 0")
       tradeInWriter.newLine()
     }
     tradeInWriter.write("End of TradeB")
