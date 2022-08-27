@@ -35,7 +35,7 @@ object Query6Comparison {
         }
 
         def smallerD(x: Double, y: Double): Boolean = {
-            if (x * 1.2 < y) true
+            if (x < y) true
             else false
         }
 

@@ -104,7 +104,7 @@ object TradeToHold {
 
     println("creating tradeB.txt")
     for (t <- tradeB) {
-      tradeBWriter.write(s"${t._1}|${t._2}|${t._3}|${t._4}|${t._5}")
+      tradeBWriter.write(s"${t._1}|${t._2}|${t._3}|${t._4}|${t._5.toDouble * 1.2}")
       tradeBWriter.newLine()
     }
     tradeBWriter.flush()
