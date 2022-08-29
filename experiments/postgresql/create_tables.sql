@@ -1,0 +1,41 @@
+CREATE TABLE IF NOT EXISTS bitcoin (
+    src INT,
+    dst INT,
+    weight INT
+);
+
+CREATE TABLE IF NOT EXISTS epinions (
+    src INT,
+    dst INT
+);
+
+CREATE TABLE IF NOT EXISTS google (
+    src INT,
+    dst INT
+);
+
+CREATE TABLE IF NOT EXISTS wiki (
+    src INT,
+    dst INT
+);
+
+CREATE TABLE IF NOT EXISTS dblp (
+    src INT,
+    dst INT
+);
+
+CREATE TABLE IF NOT EXISTS trade (
+	T_ID BIGINT,
+	T_DTS BIGINT,
+	T_TT_ID CHAR(3),
+	T_S_SYMB CHAR(15),
+	T_CA_ID BIGINT,
+	T_TRADE_PRICE DECIMAL
+);
+
+CREATE TABLE IF NOT EXISTS holding (
+	CK BIGINT,
+	SK CHAR(15),
+	ST TIMESTAMP(3),
+	ET TIMESTAMP(3)
+);
