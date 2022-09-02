@@ -145,6 +145,12 @@ maximum timeout for each task. This value is passed to the timeout command as th
 so any legal DURATION parameter (e.g. 4h) is acceptable. 
 Reducing `common.experiment.timeout` can drastically reduce the time needed to run all experiments,
 but it may also cause the lack of data for some difficult tasks in the result figure.
+
+The value of `common.experiment.postgresql.timeout`(in milliseconds) should be consistent
+with `common.experiment.timeout`. This configuration will be pass to postgresql as
+'statement_timeout' in execution. Please remember to set this value in case you have changed the value
+of `common.experiment.timeout`.
+
 #### Spec files
 There are some `*.spec` files under the folder `specs/`. Each of them corresponds to an experiment in the paper.
 For example, the `specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec` corresponds the parallel experiment of Q2.

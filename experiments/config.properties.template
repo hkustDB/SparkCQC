@@ -12,3 +12,4 @@ postgresql.port=5432
 common.tmp.path=/tmp
 common.experiment.repeat=10
 common.experiment.timeout=24h
+common.experiment.postgresql.timeout=86400000

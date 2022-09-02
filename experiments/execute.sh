@@ -246,7 +246,7 @@ function execute_spark {
 }
 
 function execute_postgresql {
-    timeout_time=$(prop ${config_files} 'common.experiment.timeout')
+    timeout_time=$(prop ${config_files} 'common.experiment.postgresql.timeout')
     postgresql_home=$(prop ${config_files} 'postgresql.home')
     psql="${postgresql_home}/bin/psql"
     database=$(prop ${config_files} 'postgresql.database')
@@ -266,11 +266,12 @@ function execute_postgresql {
 
     echo "SET max_parallel_workers_per_gather=$2;" >> ${submit_query}
     echo "SET max_parallel_workers=$2;" >> ${submit_query}
+    echo "SET statement_timeout=${timeout_time};" >> ${submit_query}
     echo "COPY (" >> ${submit_query}
     cat ${input_query} >> ${submit_query}
     echo ") TO '/dev/null' DELIMITER ',' CSV;" >> ${submit_query}
 
-    timeout -s SIGKILL "${timeout_time}" ${psql} "-d" "${database}" "-U" "${username}" "-p" "${port}" \
+    ${psql} "-d" "${database}" "-U" "${username}" "-p" "${port}" \
     "-c" '\timing' "-f" "${submit_query}" >> ${log_file} 2>&1
 
     status_code=$?
