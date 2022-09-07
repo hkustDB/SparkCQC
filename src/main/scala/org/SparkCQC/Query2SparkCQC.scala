@@ -1,8 +1,10 @@
 package org.SparkCQC
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
+import org.apache.spark.{HashPartitioner, Partitioner, SparkConf, SparkContext}
 import org.SparkCQC.ComparisonJoins._
+
+import scala.util.Random
 
 /**
  * This is a test program for testing the following SQL query over a graph
@@ -21,7 +23,7 @@ object Query2SparkCQC {
     val sc = new SparkContext(conf)
 
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
-    sc.defaultParallelism
+    val defaultParallelism = sc.defaultParallelism
 
     assert(args.length == 4)
     val path = args(0)
@@ -77,9 +79,13 @@ object Query2SparkCQC {
 
     val enum2 = C.enumeration(enum1, triangleBGroup, Array(0, 1, 2, 3), Array(0, 1, 2, 3), (2, 3), (1, 3), 0, (x: Int, y: Int) => smaller(x + k, y))
 
-    if (saveAsTextFilePath.nonEmpty)
-      enum2.saveAsTextFile(saveAsTextFilePath)
-    else
+    if (saveAsTextFilePath.nonEmpty) {
+      val result = enum2.partitionBy(new Partitioner {
+        override def numPartitions: Int = defaultParallelism
+        override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
+      })
+      result.saveAsTextFile(saveAsTextFilePath)
+    } else
       spark.time(println(enum2.count()))
 
     println("APP Name :" + spark.sparkContext.appName)

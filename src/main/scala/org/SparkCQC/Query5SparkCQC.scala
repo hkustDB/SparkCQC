@@ -3,7 +3,9 @@ package org.SparkCQC
 import org.SparkCQC.ComparisonJoins.ComparisonJoins
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{Partitioner, SparkConf, SparkContext}
+
+import scala.util.Random
 
 /**
  * This is a test program for testing the following SQL query over a graph
@@ -25,6 +27,8 @@ object Query5SparkCQC {
     val sc = new SparkContext(conf)
 
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
+
+    val defaultParallelism = sc.defaultParallelism
 
     assert(args.length == 4)
     val path = args(0)
@@ -81,9 +85,13 @@ object Query5SparkCQC {
     ).filter(x => smaller(x._2._2.asInstanceOf[Int], x._2._3.asInstanceOf[Int]))
         .map(x => (x._1.asInstanceOf[Int], x._2._1))
 
-    if (saveAsTextFilePath.nonEmpty)
-      result.saveAsTextFile(saveAsTextFilePath)
-    else
+    if (saveAsTextFilePath.nonEmpty) {
+      val result2 = result.partitionBy(new Partitioner {
+        override def numPartitions: Int = defaultParallelism
+        override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
+      })
+      result2.saveAsTextFile(saveAsTextFilePath)
+    } else
       spark.time(print(result.count()))
 
     println("APP Name :" + spark.sparkContext.appName)

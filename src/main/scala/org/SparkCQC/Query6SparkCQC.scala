@@ -1,8 +1,10 @@
 package org.SparkCQC
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
+import org.apache.spark.{HashPartitioner, Partitioner, SparkConf, SparkContext}
 import org.SparkCQC.ComparisonJoins._
+
+import scala.util.Random
 
 /**
  * This is a test program for testing the following SQL query
@@ -21,6 +23,8 @@ object Query6SparkCQC {
         val sc = new SparkContext(conf)
 
         val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
+
+        val defaultParallelism = sc.defaultParallelism
 
         assert(args.length == 4)
         val path = args(0)
@@ -134,9 +138,13 @@ object Query6SparkCQC {
             }
         })
 
-        if (saveAsTextFilePath.nonEmpty)
-            result.saveAsTextFile(saveAsTextFilePath)
-        else
+        if (saveAsTextFilePath.nonEmpty) {
+            val result2 = result.partitionBy(new Partitioner {
+                override def numPartitions: Int = defaultParallelism
+                override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
+            })
+            result2.saveAsTextFile(saveAsTextFilePath)
+        } else
             spark.time(print(result.count()))
 
         println("APP Name :" + spark.sparkContext.appName)

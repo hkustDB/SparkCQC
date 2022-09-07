@@ -1,10 +1,11 @@
 package org.SparkCQC
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{Partitioner, SparkConf, SparkContext}
 import org.SparkCQC.ComparisonJoins.ComparisonJoins
 
 import scala.collection.mutable
+import scala.util.Random
 import scala.util.control.Breaks.{break, breakable}
 
 /**
@@ -24,6 +25,8 @@ object Query8SparkCQC {
 
         val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
         val format = new java.text.SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS")
+
+        val defaultParallelism = sc.defaultParallelism
 
         assert(args.length == 4)
         val path = args(0)
@@ -84,9 +87,13 @@ object Query8SparkCQC {
 
         val finalResult = result.reduceByKey((x, y) => x + y)
 
-        if (saveAsTextFilePath.nonEmpty)
-            finalResult.saveAsTextFile(saveAsTextFilePath)
-        else
+        if (saveAsTextFilePath.nonEmpty) {
+            val result2 = finalResult.partitionBy(new Partitioner {
+                override def numPartitions: Int = defaultParallelism
+                override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
+            })
+            result2.saveAsTextFile(saveAsTextFilePath)
+        } else
             spark.time(print(finalResult.count()))
 
         println("First SparkContext:")

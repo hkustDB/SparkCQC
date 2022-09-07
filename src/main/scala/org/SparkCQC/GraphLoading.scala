@@ -19,6 +19,8 @@ object GraphLoading {
     val path = args(0)
     println(s"load graph ${path}")
     val graph = sc.textFile(path)
+    // first count to force spark to actually load data from disk
+    graph.count()
 
     spark.time(graph.count())
     println("APP Name :" + spark.sparkContext.appName)

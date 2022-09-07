@@ -2,7 +2,9 @@ package org.SparkCQC
 
 import org.SparkCQC.ComparisonJoins._
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
+import org.apache.spark.{HashPartitioner, Partitioner, SparkConf, SparkContext}
+
+import scala.util.Random
 
 /**
  * This is a test program for testing the following SQL query
@@ -19,6 +21,8 @@ object Query7SparkCQC {
     val conf = new SparkConf()
     conf.setAppName("Query7SparkCQC")
     val sc = new SparkContext(conf)
+
+    val defaultParallelism = sc.defaultParallelism
 
     assert(args.length == 4)
     val path = args(0)
@@ -80,9 +84,13 @@ object Query7SparkCQC {
 
     val result = dbbSemiJoin2.keys
 
-    if (saveAsTextFilePath.nonEmpty)
-      result.saveAsTextFile(saveAsTextFilePath)
-    else
+    if (saveAsTextFilePath.nonEmpty) {
+      val result2 = result.partitionBy(new Partitioner {
+        override def numPartitions: Int = defaultParallelism
+        override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
+      })
+      result2.saveAsTextFile(saveAsTextFilePath)
+    } else
       spark.time(print(result.count()))
 
     println("First SparkContext:")
