@@ -59,23 +59,27 @@ task8.system.name=postgresql
 task8.postgresql.query=specs/graph_queries/q4/q4_google_postgresql.sql
 
 # Q4-Wiki
-task9.system.name=io
-task9.io.cores.max=16
-task9.io.default.parallelism=32
-task9.io.executor.cores=16
-task9.io.graph.name=wiki.txt
+task9.system.name=io_huge
+task9.io_huge.classname=org.SparkCQC.Query4SparkCQC
+task9.io_huge.cores.max=16
+task9.io_huge.default.parallelism=32
+task9.io_huge.executor.cores=16
+task9.io_huge.graph.name=wiki-txt-prepared
+task9.io_huge.driver.memory=16G
+task9.io_huge.executor.memory=360G
+task9.io_huge.k.value=0
 
 task10.system.name=cqc
 task10.cqc.cores.max=16
 task10.cqc.default.parallelism=32
 task10.cqc.executor.cores=16
-task10.cqc.graph.name=wiki.txt
+task10.cqc.graph.name=wiki-txt-prepared
 
 task11.system.name=spark
 task11.spark.cores.max=16
 task11.spark.default.parallelism=32
 task11.spark.executor.cores=16
-task11.spark.graph.name=wiki.txt
+task11.spark.graph.name=wiki-txt-prepared
 
 task12.system.name=postgresql
 task12.postgresql.parallelism=16

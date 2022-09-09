@@ -28,11 +28,12 @@ object Query3SparkCQCPlan2 {
 
     sc.defaultParallelism
 
-    assert(args.length == 4)
+    assert(args.length == 5)
     val path = args(0)
     val file = args(1)
-    val saveAsTextFilePath = args(2)
-    val k = args(3).toInt
+    val k = args(2).toInt
+    val ioType = args(3)
+    val saveAsTextFilePath = args(4)
 
     val lines = sc.textFile(s"${path}/${file}")
 

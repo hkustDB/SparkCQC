@@ -190,7 +190,7 @@ function execute_io() {
 
     timeout -s SIGKILL "${timeout_time}" ${spark_submit} "--class" "${class_name}" "--master" "${spark_master}" \
     "--conf" "spark.cores.max=${cores_max}" "--conf" "spark.default.parallelism=${default_parallelism}" \
-    "--conf" "spark.driver.memory=${driver_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
+    "--conf" "spark.driver.memory=${executor_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
     "--conf" "spark.executor.memory=${executor_memory}" \
     "${cqc_jar}" "${data_path}" "${graph_name}" "${k_value}" "normal_io" "${io_path}" >> ${log_file} 2>&1
 
@@ -204,7 +204,7 @@ function execute_io() {
     class_name="org.SparkCQC.GraphLoading"
     timeout -s SIGKILL "${timeout_time}" ${spark_submit} "--class" "${class_name}" "--master" "${spark_master}" \
     "--conf" "spark.cores.max=${cores_max}" "--conf" "spark.default.parallelism=${default_parallelism}" \
-    "--conf" "spark.driver.memory=${driver_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
+    "--conf" "spark.driver.memory=${executor_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
     "--conf" "spark.executor.memory=${executor_memory}" \
     "${cqc_jar}" "${io_path}" >> ${log_file} 2>&1
 
@@ -293,9 +293,7 @@ function execute_io_huge() {
 
 function execute_spark {
     timeout_time=$(prop ${config_files} 'common.experiment.timeout')
-    spark_home=$(prop ${config_files} 'spark.home')
-    spark_submit="${spark_home}/bin/spark-submit"
-    spark_master=$(prop ${config_files} 'spark.master.url')
+
     cqc_home="${PARENT_PATH}"
     cqc_jar="${cqc_home}/target/ComparisonJoins-1.0-SNAPSHOT.jar"
     class_name=$1
@@ -304,6 +302,11 @@ function execute_spark {
     driver_memory=$4
     executor_cores=$5
     executor_memory=$6
+
+    spark_home=$(prop ${config_files} 'spark.home')
+    spark_submit="${spark_home}/bin/spark-submit"
+    spark_master="local[${cores_max}]"
+
     main_args1=$7
     main_args2=$8
     main_args3=$9
@@ -314,7 +317,7 @@ function execute_spark {
 
     timeout -s SIGKILL "${timeout_time}" ${spark_submit} "--class" "${class_name}" "--master" "${spark_master}" \
     "--conf" "spark.cores.max=${cores_max}" "--conf" "spark.default.parallelism=${default_parallelism}" \
-    "--conf" "spark.driver.memory=${driver_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
+    "--conf" "spark.driver.memory=${executor_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
     "--conf" "spark.executor.memory=${executor_memory}" \
     "${cqc_jar}" "${main_args1}" "${main_args2}" "${main_args3}" "${main_args4}" "${main_args5}" >> ${log_file} 2>&1
 
