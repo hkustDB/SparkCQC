@@ -17,8 +17,8 @@ object GraphLoading {
 
     assert(args.length == 1)
     val path = args(0)
-    println(s"load graph ${path}")
-    val graph = sc.textFile(path)
+    println(s"load graph file:${path}")
+    val graph = sc.textFile(s"file:${path}")
     // first count to force spark to actually load data from disk
     graph.count()
 

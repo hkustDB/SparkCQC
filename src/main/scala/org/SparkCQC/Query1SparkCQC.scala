@@ -2,9 +2,7 @@ package org.SparkCQC
 
 import org.SparkCQC.ComparisonJoins._
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.{Partitioner, SparkConf, SparkContext}
-
-import scala.util.Random
+import org.apache.spark.{SparkConf, SparkContext}
 
 /**
  * This is a test program for testing the following SQL query over a graph
@@ -25,11 +23,12 @@ object Query1SparkCQC {
 
     val defaultParallelism = sc.defaultParallelism
 
-    assert(args.length == 4)
+    assert(args.length == 5)
     val path = args(0)
     val file = args(1)
-    val saveAsTextFilePath = args(2)
-    val k = args(3).toInt
+    val k = args(2).toInt
+    val ioType = args(3)
+    val saveAsTextFilePath = args(4)
 
     // Modify to the correct input file path
     val lines = sc.textFile(s"file:${path}/${file}")
@@ -78,8 +77,8 @@ object Query1SparkCQC {
     // enum3 Schema (g3.DST, c2.CNT, g3.SRC, g2.SRC, g1.SRC, c1.CNT)
     val enum3 = C enumeration (enum2, g1CoGroup, Array(0, 1, 2, 3), Array(0, 2), (2, 2), (1, 1), 4, (x: Int, y: Int) => smaller(x + k, y))
 
-    if (saveAsTextFilePath.nonEmpty)
-      IOTaskHelper.saveResultAsTextFile(enum3, saveAsTextFilePath, defaultParallelism)
+    if (ioType != "no_io")
+      IOTaskHelper.saveResultAsTextFile(enum3, ioType, saveAsTextFilePath, defaultParallelism)
     else
       spark.time(print(enum3.count()))
     println("APP Name :" + spark.sparkContext.appName)

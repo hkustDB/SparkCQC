@@ -29,13 +29,14 @@ object Query3SparkCQCPlan1 {
 
     val defaultParallelism = sc.defaultParallelism
 
-    assert(args.length == 4)
+    assert(args.length == 5)
     val path = args(0)
     val file = args(1)
-    val saveAsTextFilePath = args(2)
-    val k = args(3).toInt
+    val k = args(2).toInt
+    val ioType = args(3)
+    val saveAsTextFilePath = args(4)
 
-    val lines = sc.textFile(s"${path}/${file}")
+    val lines = sc.textFile(s"file:${path}/${file}")
     val graph = lines.map(line => {
       val temp = line.split("\\s+")
       (temp(0).toInt, Array[Any](temp(0).toInt, temp(1).toInt))
@@ -83,13 +84,9 @@ object Query3SparkCQCPlan1 {
     // enum1 Schema (g3.SRC, g3.DST, c4.cnt, c2.cnt, g2.src, c3.cnt, g1.src, c1.cnt)
     val enum1 = C enumeration(cnt, g1CoGroup, Array(0, 1, 2, 3, 4, 5), Array(0, 2), (2, 2), (1, 3), 6, smaller(_, _))
 
-    if (saveAsTextFilePath.nonEmpty) {
-      val result = enum1.partitionBy(new Partitioner {
-        override def numPartitions: Int = defaultParallelism
-        override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
-      })
-      result.saveAsTextFile(saveAsTextFilePath)
-    } else
+    if (ioType != "no_io")
+      IOTaskHelper.saveResultAsTextFile(enum1, ioType, saveAsTextFilePath, defaultParallelism)
+    else
       spark.time(print(enum1.count()))
 
 

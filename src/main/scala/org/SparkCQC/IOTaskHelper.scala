@@ -3,40 +3,43 @@ package org.SparkCQC
 import org.apache.spark.rdd.RDD
 
 import scala.reflect.ClassTag
-import scala.util.Random
 
 object IOTaskHelper {
     /**
-     *
+     * helper method for CQC jobs to save result as text file on disk.
+     * It is part of the I/O tasks in the experiments.
      * @param result
      * @param configuredPath
      * @param parallelism
      * @tparam T
      */
-    def saveResultAsTextFile[T: ClassTag](result: RDD[T], configuredPath: String, parallelism: Int): Unit = {
-        assert(configuredPath.nonEmpty)
-        var path = ""
-        var isParallelIO = false
-        if (configuredPath.startsWith("io")) {
-            isParallelIO = false
-            path = s"file:${configuredPath.substring(3)}"
-        } else if (configuredPath.startsWith("pio")) {
-            isParallelIO = true
-            path = s"file:${configuredPath.substring(4)}"
-        } else {
-            throw new IllegalArgumentException("configuredPath should be 'io:/path/to/tmp_path' or 'pio:/path/to/tmp_path'")
-        }
-
-        if (isParallelIO) {
-            // for parallel I/O Tasks, we maintain only (1 / parallelism) of the result and write it to disk,
-            // since the result is always huge. We do it 4 times to mitigate the variation in the random filtering.
-            // The paths will be '/path/to/tmp_path/tmp_x' where x in [1,2,3,4]
-            for (i <- (1 to 4)) {
-                result.mapPartitions(it => it.filter(_ => Random.nextInt(parallelism) == 0)).saveAsTextFile(s"${path}/tmp_${i}")
-            }
-        } else {
+    def saveResultAsTextFile[T: ClassTag](result: RDD[T], ioType: String, path: String, parallelism: Int): Unit = {
+        assert(ioType == "normal_io" || ioType == "huge_io")
+        val isNormalIo = (ioType == "normal_io")
+        if (isNormalIo) {
             // for normal I/O tasks, we just write all the results to disk
-            result.saveAsTextFile(path)
+            result.saveAsTextFile(s"file:${path}")
+        } else {
+            // for huge I/O Tasks, we maintain only (1 / parallelism) of the result and write it to disk,
+            // since the result is often huge. And we will report the I/O cost after multiply by the parallelism.
+            result.mapPartitions(it => new FilterIterator(it, parallelism)).saveAsTextFile(s"file:${path}")
+        }
+    }
+
+    /**
+     * A iterator wrapper that keeps one element every ${dropPeriod} elements.
+     * e.g., after wrapping List(1,2,3,4,5,6,7).iterator with dropPeriod = 5, the FilterIterator will output 1 and 6
+     * @param it
+     * @param dropPeriod
+     * @param classTag$T$0
+     * @tparam T
+     */
+    class FilterIterator[T: ClassTag](it: Iterator[T], dropPeriod: Int) extends Iterator[T] {
+        override def hasNext: Boolean = it.hasNext
+        override def next(): T = {
+            val result = it.next()
+            it.drop(dropPeriod - 1)
+            result
         }
     }
 }

@@ -26,19 +26,21 @@ object Query6SparkCQC {
 
         val defaultParallelism = sc.defaultParallelism
 
-        assert(args.length == 4)
+        assert(args.length == 5)
         val path = args(0)
         val file = args(1)
-        val saveAsTextFilePath = args(2)
+        val k = args(2).toInt
+        val ioType = args(3)
+        val saveAsTextFilePath = args(4)
 
         val partitioner = new HashPartitioner(32)
 
-        val dbs = sc.textFile(s"${path}/tradeS.txt").coalesce(32).map(line => {
+        val dbs = sc.textFile(s"file:${path}/tradeS.txt").coalesce(32).map(line => {
             val temp = line.split("\\|")
             ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble))
         }).partitionBy(partitioner).cache()
 
-        val dbb = sc.textFile(s"${path}/tradeB.txt").coalesce(32).map(line => {
+        val dbb = sc.textFile(s"file:${path}/tradeB.txt").coalesce(32).map(line => {
             val temp = line.split("\\|")
             ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble))
         }).partitionBy(partitioner).cache()
@@ -138,13 +140,9 @@ object Query6SparkCQC {
             }
         })
 
-        if (saveAsTextFilePath.nonEmpty) {
-            val result2 = result.partitionBy(new Partitioner {
-                override def numPartitions: Int = defaultParallelism
-                override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
-            })
-            result2.saveAsTextFile(saveAsTextFilePath)
-        } else
+        if (ioType != "no_io")
+            IOTaskHelper.saveResultAsTextFile(result, ioType, saveAsTextFilePath, defaultParallelism)
+        else
             spark.time(print(result.count()))
 
         println("APP Name :" + spark.sparkContext.appName)

@@ -110,20 +110,20 @@ function execute_task {
         tmp_path=$(prop ${config_files} "common.tmp.path")
         k_value=$(prop2 ${spec_file} "task${current_task}.io.k.value" "task.io.k.value")
         execute_io ${class_name} ${cores_max} ${default_parallelism} ${driver_memory} \
-        ${executor_cores} ${executor_memory} ${main_args1} ${main_args2} "${tmp_path}/tmp_io" ${k_value}
-    elif [[ "${system_name}" == "io_parallel" ]]; then
-        class_name=$(prop2 ${spec_file} "task${current_task}.io_parallel.classname" "task.io_parallel.classname")
-        cores_max=$(prop2 ${spec_file} "task${current_task}.io_parallel.cores.max" "task.io_parallel.cores.max")
-        default_parallelism=$(prop2 ${spec_file} "task${current_task}.io_parallel.default.parallelism" "task.io_parallel.default.parallelism")
-        driver_memory=$(prop2 ${spec_file} "task${current_task}.io_parallel.driver.memory" "task.io_parallel.driver.memory")
-        executor_cores=$(prop2 ${spec_file} "task${current_task}.io_parallel.executor.cores" "task.io_parallel.executor.cores")
-        executor_memory=$(prop2 ${spec_file} "task${current_task}.io_parallel.executor.memory" "task.io_parallel.executor.memory")
+        ${executor_cores} ${executor_memory} ${main_args1} ${main_args2} ${k_value} "${tmp_path}/tmp_io"
+    elif [[ "${system_name}" == "io_huge" ]]; then
+        class_name=$(prop2 ${spec_file} "task${current_task}.io_huge.classname" "task.io_huge.classname")
+        cores_max=$(prop2 ${spec_file} "task${current_task}.io_huge.cores.max" "task.io_huge.cores.max")
+        default_parallelism=$(prop2 ${spec_file} "task${current_task}.io_huge.default.parallelism" "task.io_huge.default.parallelism")
+        driver_memory=$(prop2 ${spec_file} "task${current_task}.io_huge.driver.memory" "task.io_huge.driver.memory")
+        executor_cores=$(prop2 ${spec_file} "task${current_task}.io_huge.executor.cores" "task.io_huge.executor.cores")
+        executor_memory=$(prop2 ${spec_file} "task${current_task}.io_huge.executor.memory" "task.io_huge.executor.memory")
         main_args1="${SCRIPT_PATH}/data"
-        main_args2=$(prop2 ${spec_file} "task${current_task}.io_parallel.graph.name" "task.io_parallel.graph.name")
+        main_args2=$(prop2 ${spec_file} "task${current_task}.io_huge.graph.name" "task.io_huge.graph.name")
         tmp_path=$(prop ${config_files} "common.tmp.path")
-        k_value=$(prop2 ${spec_file} "task${current_task}.io_parallel.k.value" "task.io_parallel.k.value")
-        execute_io_parallel ${class_name} ${cores_max} ${default_parallelism} ${driver_memory} \
-        ${executor_cores} ${executor_memory} ${main_args1} ${main_args2} "${tmp_path}/tmp_io" ${k_value}
+        k_value=$(prop2 ${spec_file} "task${current_task}.io_huge.k.value" "task.io_huge.k.value")
+        execute_io_huge ${class_name} ${cores_max} ${default_parallelism} ${driver_memory} \
+        ${executor_cores} ${executor_memory} ${main_args1} ${main_args2} ${k_value} "${tmp_path}/tmp_io"
     elif [[ "${system_name}" == "cqc" ]]; then
         class_name=$(prop2 ${spec_file} "task${current_task}.cqc.classname" "task.cqc.classname")
         cores_max=$(prop2 ${spec_file} "task${current_task}.cqc.cores.max" "task.cqc.cores.max")
@@ -135,7 +135,7 @@ function execute_task {
         main_args2=$(prop2 ${spec_file} "task${current_task}.cqc.graph.name" "task.cqc.graph.name")
         k_value=$(prop2 ${spec_file} "task${current_task}.cqc.k.value" "task.cqc.k.value")
         execute_spark ${class_name} ${cores_max} ${default_parallelism} ${driver_memory} \
-        ${executor_cores} ${executor_memory} ${main_args1} ${main_args2} "" ${k_value}
+        ${executor_cores} ${executor_memory} ${main_args1} ${main_args2} ${k_value} "no_io" "dummy"
     elif [[ "${system_name}" == "spark" ]]; then
         class_name=$(prop2 ${spec_file} "task${current_task}.spark.classname" "task.spark.classname")
         cores_max=$(prop2 ${spec_file} "task${current_task}.spark.cores.max" "task.spark.cores.max")
@@ -158,7 +158,7 @@ function execute_task {
         memory=$(prop2 ${spec_file} "task${current_task}.any_k.memory" "task.any_k.memory")
         execute_any_k ${class_name} ${in_file} ${memory}
     else
-        err "system name must be cqc, spark, or postgresql"
+        err "system name must be io, io_huge, cqc, spark, any_k, or postgresql"
     fi
 
     echo ${execution_time} >> ${task_result_file}
@@ -179,20 +179,20 @@ function execute_io() {
     spark_submit="${spark_home}/bin/spark-submit"
     spark_master="local[${cores_max}]"
 
-    main_args1=$7
-    main_args2=$8
-    main_args3=$9
-    main_args4=${10}
+    data_path=$7
+    graph_name=$8
+    k_value=$9
+    io_path=${10}
 
     cd ${SCRIPT_PATH}
 
-    rm -rf "${main_args3}"
+    rm -rf "${io_path}"
 
     timeout -s SIGKILL "${timeout_time}" ${spark_submit} "--class" "${class_name}" "--master" "${spark_master}" \
     "--conf" "spark.cores.max=${cores_max}" "--conf" "spark.default.parallelism=${default_parallelism}" \
     "--conf" "spark.driver.memory=${driver_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
     "--conf" "spark.executor.memory=${executor_memory}" \
-    "${cqc_jar}" "${main_args1}" "${main_args2}" "${main_args3}" "${main_args4}" >> ${log_file} 2>&1
+    "${cqc_jar}" "${data_path}" "${graph_name}" "${k_value}" "normal_io" "${io_path}" >> ${log_file} 2>&1
 
     status_code=$?
     if [[ ${status_code} -eq 137 ]]; then
@@ -206,7 +206,7 @@ function execute_io() {
     "--conf" "spark.cores.max=${cores_max}" "--conf" "spark.default.parallelism=${default_parallelism}" \
     "--conf" "spark.driver.memory=${driver_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
     "--conf" "spark.executor.memory=${executor_memory}" \
-    "${cqc_jar}" "${main_args3}" >> ${log_file} 2>&1
+    "${cqc_jar}" "${io_path}" >> ${log_file} 2>&1
 
     status_code=$?
     if [[ ${status_code} -eq 137 ]]; then
@@ -221,7 +221,7 @@ function execute_io() {
     fi
 }
 
-function execute_io_parallel() {
+function execute_io_huge() {
     timeout_time=$(prop ${config_files} 'common.experiment.timeout')
     cqc_home="${PARENT_PATH}"
     cqc_jar="${cqc_home}/target/ComparisonJoins-1.0-SNAPSHOT.jar"
@@ -236,20 +236,20 @@ function execute_io_parallel() {
     spark_submit="${spark_home}/bin/spark-submit"
     spark_master="local[${cores_max}]"
 
-    main_args1=$7
-    main_args2=$8
-    main_args3=$9
-    main_args4=${10}
+    data_path=$7
+    graph_name=$8
+    k_value=$9
+    io_path=${10}
 
     cd ${SCRIPT_PATH}
 
-    rm -rf "${main_args3}"
+    rm -rf "${io_path}"
 
     timeout -s SIGKILL "${timeout_time}" ${spark_submit} "--class" "${class_name}" "--master" "${spark_master}" \
     "--conf" "spark.cores.max=${cores_max}" "--conf" "spark.default.parallelism=${default_parallelism}" \
     "--conf" "spark.driver.memory=${executor_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
     "--conf" "spark.executor.memory=${executor_memory}" \
-    "${cqc_jar}" "${main_args1}" "${main_args2}" "${main_args3}" "${main_args4}" >> ${log_file} 2>&1
+    "${cqc_jar}" "${data_path}" "${graph_name}" "${k_value}" "huge_io" "${io_path}" >> ${log_file} 2>&1
 
     status_code=$?
     if [[ ${status_code} -eq 137 ]]; then
@@ -260,46 +260,35 @@ function execute_io_parallel() {
 
     class_name="org.SparkCQC.GraphLoading"
     # randomly pick 4 part-* files for loading
-    # all the io_parallel tasks should have default.parallelism = 4n
+    # all the io_huge tasks should have default.parallelism = 4n
     # since the loading maybe very time consuming, we just measure 4 part-* files and report n times
     # the sum of the cost.
-    part_files=$(find "${main_args3}" -type f -name "part-*")
-    picked_files=$(echo "${part_files}" | shuf -n 4)
-    execution_time_sum=0
-    for picked_file in ${picked_files[@]}; do
-        echo "picked file: ${picked_file}" >> ${log_file}
-        timeout -s SIGKILL "${timeout_time}" ${spark_submit} "--class" "${class_name}" "--master" "${spark_master}" \
-        "--conf" "spark.cores.max=${cores_max}" "--conf" "spark.default.parallelism=${default_parallelism}" \
-        "--conf" "spark.driver.memory=${executor_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
-        "--conf" "spark.executor.memory=${executor_memory}" \
-        "${cqc_jar}" "${picked_file}" >> ${log_file} 2>&1
+    timeout -s SIGKILL "${timeout_time}" ${spark_submit} "--class" "${class_name}" "--master" "${spark_master}" \
+    "--conf" "spark.cores.max=${cores_max}" "--conf" "spark.default.parallelism=${default_parallelism}" \
+    "--conf" "spark.driver.memory=${executor_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
+    "--conf" "spark.executor.memory=${executor_memory}" \
+    "${cqc_jar}" "${io_path}" >> ${log_file} 2>&1
 
-        status_code=$?
-        echo "finish loading file: ${picked_file} with status: ${status_code}" >> ${log_file}
-        if [[ ${status_code} -eq 137 ]]; then
-            return 1
-        elif [[ ${status_code} -ne 0 ]]; then
-            return 1
+    status_code=$?
+    if [[ ${status_code} -eq 137 ]]; then
+        return 1
+    elif [[ ${status_code} -ne 0 ]]; then
+        return 1
+    else
+        extracted_time=$(tail -n 20 ${log_file} | grep "Time taken: " | tail -n 1 | sed -rn 's/^.*Time taken:\s*(\S+).*$/\1/p')
+        if [[ -n ${extracted_time} ]]; then
+            current_execution_time=${extracted_time}
+            echo "execution time for file: ${io_path} is ${current_execution_time} ms" >> ${log_file}
+            # write the execution_time_sum * parallelism into execution_time
+            echo "default_parallelism = ${default_parallelism}"
+            # e.g., assume we have load the tmp file in 90000 ms, and the parallelism is 32,
+            # since the tmp file contains only 1/32 rows of the whole result
+            # the total execution_time should be 90000 * 32 = 2880000 ms
+            execution_time=$(echo "${current_execution_time} * ${default_parallelism}" | bc)
         else
-            extracted_time=$(tail -n 20 ${log_file} | grep "Time taken: " | tail -n 1 | sed -rn 's/^.*Time taken:\s*(\S+).*$/\1/p')
-            if [[ -n ${extracted_time} ]]; then
-                current_execution_time=${extracted_time}
-                echo "execution time for file: ${picked_file} is ${current_execution_time} ms" >> ${log_file}
-                execution_time_sum=$(echo "${execution_time_sum} + ${current_execution_time}" | bc)
-            else
-                return 1
-            fi
+            return 1
         fi
-    done
-
-    # loading for all 4 part-* files completed successfully.
-    # write the total time(n * sum) into execution_time
-    n_factor=$(echo "${default_parallelism} / 4" | bc)
-    echo "default_parallelism = ${default_parallelism}"
-    echo "n_factor = ${n_factor}"
-    # e.g., assume we have 32 part-* files, then we should report sum(time of 4 loading tasks) * (32 / 4)
-    execution_time_sum=$(echo "${execution_time_sum} * ${n_factor}" | bc)
-    execution_time=${execution_time_sum}
+    fi
 }
 
 function execute_spark {
@@ -319,6 +308,7 @@ function execute_spark {
     main_args2=$8
     main_args3=$9
     main_args4=${10}
+    main_args5=${11}
 
     cd ${SCRIPT_PATH}
 
@@ -326,7 +316,7 @@ function execute_spark {
     "--conf" "spark.cores.max=${cores_max}" "--conf" "spark.default.parallelism=${default_parallelism}" \
     "--conf" "spark.driver.memory=${driver_memory}" "--conf" "spark.executor.cores=${executor_cores}" \
     "--conf" "spark.executor.memory=${executor_memory}" \
-    "${cqc_jar}" "${main_args1}" "${main_args2}" "${main_args3}" "${main_args4}" >> ${log_file} 2>&1
+    "${cqc_jar}" "${main_args1}" "${main_args2}" "${main_args3}" "${main_args4}" "${main_args5}" >> ${log_file} 2>&1
 
     status_code=$?
     if [[ ${status_code} -eq 137 ]]; then

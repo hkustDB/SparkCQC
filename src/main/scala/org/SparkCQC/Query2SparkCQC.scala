@@ -25,14 +25,15 @@ object Query2SparkCQC {
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
     val defaultParallelism = sc.defaultParallelism
 
-    assert(args.length == 4)
+    assert(args.length == 5)
     val path = args(0)
     val file = args(1)
-    val saveAsTextFilePath = args(2)
-    val k = args(3).toInt
+    val k = args(2).toInt
+    val ioType = args(3)
+    val saveAsTextFilePath = args(4)
 
     // Modify to the correct input file path
-    val lines = sc.textFile(s"${path}/${file}")
+    val lines = sc.textFile(s"file:${path}/${file}")
 
     def smaller(x: Int, y: Int): Boolean = {
       if (x < y) true
@@ -79,13 +80,9 @@ object Query2SparkCQC {
 
     val enum2 = C.enumeration(enum1, triangleBGroup, Array(0, 1, 2, 3), Array(0, 1, 2, 3), (2, 3), (1, 3), 0, (x: Int, y: Int) => smaller(x + k, y))
 
-    if (saveAsTextFilePath.nonEmpty) {
-      val result = enum2.partitionBy(new Partitioner {
-        override def numPartitions: Int = defaultParallelism
-        override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
-      })
-      result.saveAsTextFile(saveAsTextFilePath)
-    } else
+    if (ioType != "no_io")
+      IOTaskHelper.saveResultAsTextFile(enum2, ioType, saveAsTextFilePath, defaultParallelism)
+    else
       spark.time(println(enum2.count()))
 
     println("APP Name :" + spark.sparkContext.appName)

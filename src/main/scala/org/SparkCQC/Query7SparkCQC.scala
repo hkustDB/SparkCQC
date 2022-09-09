@@ -24,26 +24,28 @@ object Query7SparkCQC {
 
     val defaultParallelism = sc.defaultParallelism
 
-    assert(args.length == 4)
+    assert(args.length == 5)
     val path = args(0)
     val file = args(1)
-    val saveAsTextFilePath = args(2)
+    val k = args(2).toInt
+    val ioType = args(3)
+    val saveAsTextFilePath = args(4)
 
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
 
     val partitioner = new HashPartitioner(32)
 
-    val dba = sc.textFile(s"${path}/${file}").coalesce(32).map(line => {
+    val dba = sc.textFile(s"file:${path}/${file}").coalesce(32).map(line => {
       val temp = line.split("\\|")
       ((temp(3), temp(4).toLong), Array(temp(0).toLong, temp(1).toLong + 7776000000L, temp(3), temp(4).toLong, temp(5).toDouble))
     }).partitionBy(partitioner).cache()
 
-    val dbb = sc.textFile(s"${path}/${file}").coalesce(32).map(line => {
+    val dbb = sc.textFile(s"file:${path}/${file}").coalesce(32).map(line => {
       val temp = line.split("\\|")
       ((temp(3), temp(4).toLong), Array(temp(0).toLong, temp(1).toLong, temp(3), temp(4).toLong, temp(5).toDouble))
     }).partitionBy(partitioner).cache()
 
-    val dbc = sc.textFile(s"${path}/${file}").coalesce(32).map(line => {
+    val dbc = sc.textFile(s"file:${path}/${file}").coalesce(32).map(line => {
       val temp = line.split("\\|")
       ((temp(3), temp(4).toLong), Array(temp(0).toLong, temp(1).toLong - 7776000000L, temp(3), temp(4).toLong, temp(5).toDouble))
     }).partitionBy(partitioner).cache()
@@ -84,13 +86,9 @@ object Query7SparkCQC {
 
     val result = dbbSemiJoin2.keys
 
-    if (saveAsTextFilePath.nonEmpty) {
-      val result2 = result.partitionBy(new Partitioner {
-        override def numPartitions: Int = defaultParallelism
-        override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
-      })
-      result2.saveAsTextFile(saveAsTextFilePath)
-    } else
+    if (ioType != "no_io")
+      IOTaskHelper.saveResultAsTextFile(result, ioType, saveAsTextFilePath, defaultParallelism)
+    else
       spark.time(print(result.count()))
 
     println("First SparkContext:")

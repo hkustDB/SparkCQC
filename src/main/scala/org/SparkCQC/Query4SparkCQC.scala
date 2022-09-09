@@ -25,12 +25,14 @@ object Query4SparkCQC {
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
 
     val defaultParallelism = sc.defaultParallelism
-    assert(args.length == 4)
+    assert(args.length == 5)
     val path = args(0)
     val file = args(1)
-    val saveAsTextFilePath = args(2)
+    val k = args(2).toInt
+    val ioType = args(3)
+    val saveAsTextFilePath = args(4)
 
-    val lines = sc.textFile(s"${path}/${file}")
+    val lines = sc.textFile(s"file:${path}/${file}")
     val graph = lines.map(line => {
       val temp = line.split("\\s+")
       (temp(0).toInt, Array[Any](temp(0).toInt, temp(1).toInt))
@@ -73,13 +75,9 @@ object Query4SparkCQC {
     val enum1 = C enumeration(cnt, g3CoGroup, Array(0, 1), Array(0), (2, 2), (1, 1), 2, smaller(_, _))
     enum1.cache()
 
-    if (saveAsTextFilePath.nonEmpty) {
-      val result = enum1.partitionBy(new Partitioner {
-        override def numPartitions: Int = defaultParallelism
-        override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
-      })
-      result.saveAsTextFile(saveAsTextFilePath)
-    } else
+    if (ioType != "no_io")
+      IOTaskHelper.saveResultAsTextFile(enum1, ioType, saveAsTextFilePath, defaultParallelism)
+    else
       spark.time(print(enum1.count()))
 
     println("APP Name :" + spark.sparkContext.appName)

@@ -28,12 +28,14 @@ object Query8SparkCQC {
 
         val defaultParallelism = sc.defaultParallelism
 
-        assert(args.length == 4)
+        assert(args.length == 5)
         val path = args(0)
         val file = args(1)
-        val saveAsTextFilePath = args(2)
+        val k = args(2).toInt
+        val ioType = args(3)
+        val saveAsTextFilePath = args(4)
 
-        val lines = sc.textFile(s"${path}/${file}", 1).coalesce(1)
+        val lines = sc.textFile(s"file:${path}/${file}", 1).coalesce(1)
 
         val db = lines.map(line => {
             val temp = line.split("\\|")
@@ -87,13 +89,9 @@ object Query8SparkCQC {
 
         val finalResult = result.reduceByKey((x, y) => x + y)
 
-        if (saveAsTextFilePath.nonEmpty) {
-            val result2 = finalResult.partitionBy(new Partitioner {
-                override def numPartitions: Int = defaultParallelism
-                override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
-            })
-            result2.saveAsTextFile(saveAsTextFilePath)
-        } else
+        if (ioType != "no_io")
+            IOTaskHelper.saveResultAsTextFile(finalResult, ioType, saveAsTextFilePath, defaultParallelism)
+        else
             spark.time(print(finalResult.count()))
 
         println("First SparkContext:")

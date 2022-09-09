@@ -19,12 +19,12 @@ object GraphPreparation {
 
     assert(args.length >= 1)
     val path = args(0)
-    println(s"prepare for graphs in ${path}")
+    println(s"prepare for graphs in file:${path}")
     listGraphFiles(args(0)).foreach(name => {
-      val graph = sc.textFile(s"${path}/${name}", 32)
+      val graph = sc.textFile(s"file:${path}/${name}", 32)
       val targetName = s"${name.replace(".", "-")}-prepared"
       println(s"write ${name} as ${targetName}")
-      graph.saveAsTextFile(s"${path}/${targetName}")
+      graph.saveAsTextFile(s"file:${path}/${targetName}")
     })
 
     println("APP Name :" + spark.sparkContext.appName)

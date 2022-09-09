@@ -30,12 +30,14 @@ object Query5SparkCQC {
 
     val defaultParallelism = sc.defaultParallelism
 
-    assert(args.length == 4)
+    assert(args.length == 5)
     val path = args(0)
     val file = args(1)
-    val saveAsTextFilePath = args(2)
+    val k = args(2).toInt
+    val ioType = args(3)
+    val saveAsTextFilePath = args(4)
 
-    val lines = sc.textFile(s"${path}/${file}")
+    val lines = sc.textFile(s"file:${path}/${file}")
     val graph = lines.map(line => {
       val temp = line.split("\\s+")
       (temp(0).toInt, temp(1).toInt)
@@ -85,13 +87,9 @@ object Query5SparkCQC {
     ).filter(x => smaller(x._2._2.asInstanceOf[Int], x._2._3.asInstanceOf[Int]))
         .map(x => (x._1.asInstanceOf[Int], x._2._1))
 
-    if (saveAsTextFilePath.nonEmpty) {
-      val result2 = result.partitionBy(new Partitioner {
-        override def numPartitions: Int = defaultParallelism
-        override def getPartition(key: Any): Int = Random.nextInt(defaultParallelism)
-      })
-      result2.saveAsTextFile(saveAsTextFilePath)
-    } else
+    if (ioType != "no_io")
+      IOTaskHelper.saveResultAsTextFile(result, ioType, saveAsTextFilePath, defaultParallelism)
+    else
       spark.time(print(result.count()))
 
     println("APP Name :" + spark.sparkContext.appName)
