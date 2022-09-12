@@ -26,7 +26,7 @@ object Query1SparkSQL {
     val file = args(1)
     val k = args(2).toInt
 
-    val lines = sc.textFile(s"${path}/${file}")
+    val lines = sc.textFile(s"file:${path}/${file}")
     val graph = lines.map(line => {
       val temp = line.split("\\s+")
       (temp(0).toInt, temp(1).toInt)

@@ -27,7 +27,7 @@ object Query7SparkSQL {
     val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
     val format = new java.text.SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS")
 
-    val lines = sc.textFile(s"${path}/${file}")
+    val lines = sc.textFile(s"file:${path}/${file}")
     val db = lines.map(line => {
       val temp = line.split("\\|")
       (temp(0).toLong, temp(1).toLong, temp(2), temp(3), temp(4).toLong, temp(5).toDouble)
