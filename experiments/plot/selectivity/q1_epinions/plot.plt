@@ -19,7 +19,7 @@ set key above
 set grid lt 0 lc 0 lw 1
 set border lw 2
 
-set term pngcairo size 550,300
+set term pngcairo size 700,350
 set output "output/figure/selectivity/q1_epinions.png"
 # io, sparkcqc, sparksql, postgresql
 plot "output/result/selectivity_q1_epinions/io.dat" using 1:($2/1000) title "I/O" ls 1 w lp, "output/result/selectivity_q1_epinions/sparkcqc.dat" using 1:($2/1000) title "SparkCQC" ls 2 w lp, "output/result/selectivity_q1_epinions/sparksql.dat" using 1:($2/1000) title "SparkSQL" ls 4 w lp, "output/result/selectivity_q1_epinions/postgresql.dat" using 1:($2/1000) title "PostgreSQL" ls 5 w lp

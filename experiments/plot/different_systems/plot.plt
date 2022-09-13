@@ -25,7 +25,7 @@ set grid lt 0 lc 0 lw 1
 set border lw 2
 
 set style histogram cluster gap 3
-set term pngcairo size 550,300
+set term pngcairo size 700,350
 set output "output/figure/different_systems/result.png"
 data = "output/result/different_systems/result.dat"
 plot data u ($1/1000) ti "I/O" ls 1 w hist fs pattern 2 bor lc 'black', data u ($2/1000) ti "1D Alternative" ls 2 w hist fs pattern 1 bor lc 'black', data u ($3/1000) ti "SparkSQL" ls 4 w hist fs pattern 4 bor lc 'black', data u ($4/1000) ti "PostgreSQL" ls 5 w hist fs pattern 7 bor lc 'black', data u ($5/1000) ti "Willard's Approach" ls 6 w hist fs pattern 2 bor lc 'black', data u ($6/1000) ti "Any-K" ls 7 w hist fs pattern 1 bor lc 'black'
