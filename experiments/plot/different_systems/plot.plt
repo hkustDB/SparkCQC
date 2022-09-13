@@ -17,9 +17,9 @@ set logscale y
 set xlabel "Queries"
 set ylabel "Processing Time (Sec)"
 set xrange [-1:1]
-set yrange [100:10000]
+set yrange [10:10000]
 set xtics ("Q6" 0)
-set ytics ("1e+02" 100, "1e+03" 1000, "1e+04" 10000)
+set ytics ("1e+01" 10, "1e+02" 100, "1e+03" 1000, "1e+04" 10000)
 set key above
 set grid lt 0 lc 0 lw 1
 set border lw 2
