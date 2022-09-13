@@ -18,14 +18,14 @@ Please make sure that these commands are in the environment variable PATH.
 #### SparkCQC
 Run the following script to compile SparkCQC
 ```shell
-# This script will change directory to '../SparkCQC' and invoke 'mvn clean compile package'
-# Check log/build.log if build or compile fail
+# This script will change the directory to '../SparkCQC' and invoke 'mvn clean compile package'
+# Check log/build.log if the build or compile procedure fails
 bash build.sh
 ```
 #### Graph data
 Download the graph data from snap by running the script `data/create_graph_data.sh`
 ```shell
-# This script will download following graphs from snap(https://snap.stanford.edu)
+# This script will download the following graphs from snap(https://snap.stanford.edu)
 # 1. bitcoin (from https://snap.stanford.edu/data/soc-sign-bitcoin-alpha.html)
 # 2. epinions (from https://snap.stanford.edu/data/soc-Epinions1.html)
 # 3. google (from https://snap.stanford.edu/data/web-Google.html)
@@ -36,11 +36,11 @@ bash data/create_graph_data.sh
 ```
 #### TPC-E data
 1. Download `tpc-e-tool.zip` from https://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp
-2. Move the downloaded `tpc-e-tool.zip` into `tpc_e` by command like `mv /path/to/tpc-e-tool.zip tpc_e/tpc-e-tool.zip`
+2. Move the downloaded `tpc-e-tool.zip` into `tpc_e` by a command like `mv /path/to/tpc-e-tool.zip tpc_e/tpc-e-tool.zip`
 3. Run the following script to build the `tpc-e-tool`
 ```shell
 # This script will unzip the tpc-e-tool.zip under tpc_e into tpc_e/tpc_e_tool/ and then build the tpc-e-tool
-# It will print a message like 'tpc_e_tool build success' if the build is completed
+# It will print a message like 'tpc_e_tool build success' if the build completes
 bash tpc_e/build_tpc_e_tool.sh
 ```
 4. Run the following script to generate data by the `tpc-e-tool`
@@ -50,7 +50,7 @@ bash tpc_e/build_tpc_e_tool.sh
 # NOTE: it will take about 30 minutes to generate the data files
 bash tpc_e/generate_tpc_e_data.sh
 ```
-5. Run the following script to convert the tpc-e data to suitable format
+5. Run the following script to convert the tpc-e data to a suitable format
 ```shell
 # This script will read the Trade.txt under tpc_e/tpc_e_tool/flat_out/ 
 # and generates 5 data files(trade.txt, tradeB.txt, tradeS.txt, trade.in, holding.txt) in data/
@@ -68,7 +68,7 @@ tar -zxvf spark-3.0.1-bin-hadoop2.7.tgz
 cd spark-3.0.1-bin-hadoop2.7
 cp conf/spark-defaults.conf.template conf/spark-defaults.conf
 # set spark.local.dir to a large enough tmp path in conf/spark-defaults.conf
-# [NOTE] this path should be created beforehand
+# [NOTE] You should create this path beforehand
 bash sbin/start-all.sh
 ```
 #### PostgreSQL Installation
@@ -81,7 +81,7 @@ run the following script to clone and build Any-K
 ```shell
 # This script will clone Any-K from git@github.com:northeastern-datalab/anyk-code.git
 # and then replace the class `experiments.Path_Unranked` with our version(any_k/Path_Unranked.java)
-# as an implementation of the query in Q6 experiment.
+# as an implementation of the query in the Q6 experiment.
 # Finally, it will call 'mvn package' to build a jar for Any-K.
 bash any_k/build.sh 
 ```
@@ -93,7 +93,7 @@ cp config.properties.template config.properties
 2. Set the configurations in `config.properties` based on your settings
 ```shell
 # NOTES:
-# 1. the common.tmp.path should be set to a path that is large enough. 
+# 1. the common.tmp.path should be set to a large enough directory. 
 # During the experiments, it will write large files under this path to measure the I/O time
 
 # 2. modify common.experiment.repeat and common.experiment.timeout if you need a quick result.
@@ -124,8 +124,8 @@ You may run the following script to check if you have set up the environment cor
 # 4. the tpc-e data files exist
 # 5. the spark.home is set properly
 # 6. the prepared versions of the graphs exist
-# 7. PostgreSQL server is running and command psql is able to connect with the server
-# 8. the tables in PostgreSQL is all created and non-empty
+# 7. PostgreSQL server is running, and command psql can connect with the server
+# 8. the tables in PostgreSQL are all created and non-empty
 # 9. Any-K has been compiled
 bash check.sh
 ```
@@ -137,23 +137,22 @@ Typically, the experiments take a long time to run.
 You can set the value of `common.experiment.repeat`(default value=10, means repeat 10 times)
 in `config.properties` to less than 10(even 1) if you want a quick result. 
 However, each iteration may still take several days. 
-Also, due to the variations in single experiment, the result figures may be slightly different
+Also, due to the variations in a single experiment, the result figures may be slightly different
 from those in the paper.
 
 You may also configure the value of `common.experiment.timeout`, which is used to control the
 maximum timeout for each task. This value is passed to the timeout command as the DURATION parameter,
-so any legal DURATION parameter (e.g. 4h) is acceptable. 
+so any legal DURATION parameter (e.g., 4h) is acceptable. 
 Reducing `common.experiment.timeout` can drastically reduce the time needed to run all experiments,
-but it may also cause the lack of data for some difficult tasks in the result figure.
+but it may also cause the lack of data for some time-consuming tasks in the resulting figure.
 
 The value of `common.experiment.postgresql.timeout`(in milliseconds) should be consistent
-with `common.experiment.timeout`. This configuration will be pass to postgresql as
-'statement_timeout' in execution. Please remember to set this value in case you have changed the value
-of `common.experiment.timeout`.
+with `common.experiment.timeout`. This configuration will be passed to postgresql as
+'statement_timeout' in execution. Please remember to set this value if you have changed the `common.experiment.timeout` value.
 
 #### Spec files
 There are some `*.spec` files under the folder `specs/`. Each of them corresponds to an experiment in the paper.
-For example, the `specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec` corresponds the parallel experiment of Q2.
+For example, the `specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec` corresponds to the parallel experiment of Q2.
 
 Each spec file is composed of several tasks, and each task corresponds to a data point in the figure.
 For example, the `task10` in the aforementioned `q2_bitcoin.spec` measures the execution time of SparkCQC
@@ -174,27 +173,26 @@ Examples:
         Run all the spec files.
 
   (2) execute -s specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec
-        Run the q2_bitcoin.spec in parallel experiment.
+        Run the q2_bitcoin.spec in a parallel experiment.
 
   (3) execute -s specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec -t 10
-        Run only the task10 in q2_bitcoin.spec in parallel experiment.
+        Run only the task10 in q2_bitcoin.spec in a parallel experiment.
 ```
 To run all the experiments, just run the execute.sh script with '-a' and wait. 
 ```shell
 bash execute.sh -a &
 ```
 #### Result
-There is a `spec.experiment.name` configuration in each of the spec files. All the execution results(in milliseconds) 
+Each spec file has a `spec.experiment.name` configuration. All the execution results(in milliseconds) 
 are stored at the path `output/result/{spec.experiment.name}/{task_name}.txt`. For example, the results of `task10` 
-in the aforementioned `q2_bitcoin.spec` will be stored at `output/result/parallel_q2_bitcoin/task10.txt`. For those 
-failed or timed out executions, a '-1' will be written in the result file. 
+The aforementioned `q2_bitcoin.spec` will be stored at `output/result/parallel_q2_bitcoin/task10.txt`. The script will write a '-1' in the result file for those failed or timed out executions. 
 
 ### Plotting
 #### Plot files
 There are 4 folders under the path `plot/`. They correspond to the experiment results(Figure 7-10) in the paper. 
 For example, the `plot/parallel_processing/` corresponds to 'Figure 9: Processing times under different parallelism'.
-If you need to plot only a particular figure, you can run the `plot.sh `script at the
-corresponding folder. In most cases, you can use the `plot_all.sh` script in the root
+You can run the `plot.sh` script in the
+corresponding folder if you need to plot only a particular figure. In most cases, you can use the `plot_all.sh` script in the root
 directory (see the section `Plot all` below) to plot all the figures at once.
 
 All the scripts `*/plot.sh` under the `plot/` folder will compute the average execution time by the result files 
@@ -220,7 +218,7 @@ bash plot_all.sh
 ```
 
 ### Troubleshooting
-1. Run the check script (see the 'Final check' section above) to make sure you have configured your 
+1. Run the check script (see the 'Final check' section above) to ensure you have configured your 
    environment correctly.
 2. Check the log files under the `log/` path. For example, if the SparkSQL experiment terminates quickly in
    the experiment of parallel_q2_bitcoin, you may check the `log/execute_parallel_q2_bitcoin.log` to find out
