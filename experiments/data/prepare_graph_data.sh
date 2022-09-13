@@ -14,7 +14,7 @@ cd "${data_path}"
 
 spark_home=$(prop ${config_files} 'spark.home')
 spark_submit="${spark_home}/bin/spark-submit"
-spark_master=$(prop ${config_files} 'spark.master.url')
+spark_master="local[16]"
 cqc_home="${PARENT_PARENT_PATH}"
 cqc_jar="${cqc_home}/target/ComparisonJoins-1.0-SNAPSHOT.jar"
 class_name="org.SparkCQC.GraphPreparation"

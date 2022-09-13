@@ -71,7 +71,6 @@ done
 echo "Checking Spark"
 spark_home=$(prop ${config_files} 'spark.home')
 spark_submit="${spark_home}/bin/spark-submit"
-spark_master=$(prop ${config_files} 'spark.master.url')
 if [[ ! -f "${spark_submit}" ]]; then
     err "Property 'spark.home' is not set properly. spark-submit is not found under ${spark_home}/bin/"
     err "Please set 'spark.home' in config.properties properly."

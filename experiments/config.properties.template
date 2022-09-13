@@ -1,6 +1,5 @@
 # Spark config
 spark.home=/path/to/spark-3.0.1-bin-hadoop2.7
-spark.master.url=spark://localhost:7077
 
 # PostgreSQL config
 postgresql.home=/path/to/PostgreSQL

@@ -4,6 +4,16 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 import org.SparkCQC.ComparisonJoins._
 
+/**
+ * This is a test program for testing the following SQL query
+ * SELECT * FROM Trade T1, Trade T2
+ * WHERE T1.TT = "BUY" and T2.TT = "SALE"
+ * and T1.CA_ID = T2.CA_ID
+ * and T1.S_SYBM = T2.S_SYMB
+ * and T1.T_DTS <= T2.T_DTS
+ * and T1.T_DTS + interval '90' day >= T2.T_DTS
+ * and T1.T_TRADE_PRICE*1.2 < T2.T_TRADE_PRICE
+ */
 object Query6Comparison {
     def main(args: Array[String]): Unit = {
         val conf = new SparkConf()
