@@ -113,12 +113,18 @@ Please make sure that these commands are available.
 - mvn(Apache Maven 3.8.4)
 - gnuplot(gnuplot 5.0 patchlevel 0)
 
-### Hardware
-All experiments were performed on a machine equipped with:
-- processors: 2 x Intel Xeon 2.1GHz processors each having 12 cores/24 threads
-- memory: 416 GB
+### Hareware Requirements
+Recommended:
+- Processors: 32 threads or above
+- Memory: 400 GB or above
+- Disk: 5 TB Space, 600 MB read/write speed or above 
 
-The experiment requires 16 cores/32 threads and 400 GB of memory. To run in a machine with less memory, you need to manually change the `task*.*.executor.memory` and `task*.any_k.memory` in all the spec files(see the section `Spec Files` below). However, doing so may cause OOM or other exceptions in the execution. The execution time may be different due to the garbage collection.
+All experiments reported were performed on a machine equipped with:
+- Processors: 2 x Intel Xeon 2.1GHz processors each having 12 cores/24 threads
+- Memory: 416 GB
+- Disk Space: 4 x 4 TB HDD with RAID 5. 
+
+To run in a machine with less memory, you need to manually change the `task*.*.executor.memory` and `task*.any_k.memory` in all the spec files(see the section `Spec Files` below). However, doing so may cause OOM or other exceptions in the execution. The execution time may be different due to the garbage collection.  
 
 ### Preparation
 Please execute the following scripts or commands to prepare the environment for the experiment.
