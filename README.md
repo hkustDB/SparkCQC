@@ -113,6 +113,13 @@ Please make sure that these commands are available.
 - mvn(Apache Maven 3.8.4)
 - gnuplot(gnuplot 5.0 patchlevel 0)
 
+### Hardware
+All experiments were performed on a machine equipped with:
+- processors: 2 x Intel Xeon 2.1GHz processors each having 12 cores/24 threads
+- memory: 416 GB
+
+The experiment requires 16 cores/32 threads and 400 GB of memory. To run in a machine with less memory, you need to manually change the `task*.*.executor.memory` and `task*.any_k.memory` in all the spec files(see the section `Spec Files` below). However, doing so may cause OOM or other exceptions in the execution. The execution time may be different due to the garbage collection.
+
 ### Preparation
 Please execute the following scripts or commands to prepare the environment for the experiment.
 The following scripts or commands assume that your current working directory is the **ROOT DIRECTORY** of this project(the same directory as this README file). 
@@ -262,7 +269,7 @@ Each spec file is composed of several tasks, and each task corresponds to a data
 For example, the `task10` in the aforementioned `q2_bitcoin.spec` measures the execution time of SparkCQC
 in the parallel experiment of Q2 under configuration `parallelism = 4`.
 #### Execute script
-Use the `execute.sh` script to execute the spec files.
+Use the `experiments/execute.sh` script to execute the spec files.
 ```shell
 Usage: execute.sh [Options]
 
@@ -273,18 +280,18 @@ Options:
   -t, --task <task ID>      Run the specific task only. (will be ignored if '-a' is set)
 
 Examples:
-  (1) execute -a
+  (1) bash execute.sh -a
         Run all the spec files.
 
-  (2) execute -s experiments/specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec
+  (2) bash execute.sh -s specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec
         Run the q2_bitcoin.spec in a parallel experiment.
 
-  (3) execute -s experiments/specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec -t 10
+  (3) bash execute.sh -s specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec -t 10
         Run only the task10 in q2_bitcoin.spec in a parallel experiment.
 ```
 To run all the experiments, just run the execute.sh script with '-a' and wait for its termination.
 ```shell
-bash execute.sh -a &
+bash experiments/execute.sh -a &
 ```
 #### Result
 Each spec file has a `spec.experiment.name` configuration. All the execution results(in milliseconds). All the execution results(in milliseconds)

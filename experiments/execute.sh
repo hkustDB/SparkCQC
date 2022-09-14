@@ -23,13 +23,13 @@ Options:
   -t, --task <task ID>      Run the specific task only. (will be ignored if '-a' is set)
 
 Examples:
-  (1) execute -a
+  (1) bash execute.sh -a
 	Run all the spec files.
 
-  (2) execute -s specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec
+  (2) bash execute.sh -s specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec
 	Run the q2_bitcoin.spec in parallel experiment.
 
-  (3) execute -s specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec -t 10
+  (3) bash execute.sh -s specs/parallel_processing/q2_bitcoin/q2_bitcoin.spec -t 10
 	Run only the task10 in q2_bitcoin.spec in parallel experiment.
 "
     exit 1
