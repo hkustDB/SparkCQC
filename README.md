@@ -1,3 +1,9 @@
+<p float="left">
+  <img src="https://www.acm.org/binaries/content/gallery/acm/publications/replication-badges/results_reproduced_dl.jpg" height="50px" width="50px" />
+  <img src="https://www.acm.org/binaries/content/gallery/acm/publications/replication-badges/artifacts_available_dl.jpg" height="50px" width="50px" /> 
+  <img src="https://www.acm.org/binaries/content/gallery/acm/publications/replication-badges/artifacts_evaluated_reusable_dl.jpg" height="50px" width="50px" />
+</p>
+
 # SparkCQC
 This project provides the source code of our paper:
 [Conjunctive Queries with Comparisons](https://dl.acm.org/doi/10.1145/3514221.3517830). It also contains the scripts for reproducing the experiment results in the paper.
