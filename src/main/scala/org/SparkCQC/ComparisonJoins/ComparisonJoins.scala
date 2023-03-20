@@ -88,6 +88,84 @@ class ComparisonJoins extends java.io.Serializable{
     }
   }
 
+  // A customer Iterator for appending annotation
+  class CustomAnnotationIterator[K: ClassTag, K1](iter: Iterator[(K, (Iterable[Array[Any]], Iterable[Array[Array[Any]]]))],
+                                        apos: Array[Int],
+                                        bpos: Array[Int],
+                                        comparison1: Int,
+                                        comparison2: Int,
+                                        key: Int,
+                                        comparisonFunction: (K1, K1) => Boolean) extends Iterator[(K, Array[Any])] {
+    private var nextEle: (K, Array[Any]) = null
+    private var initial: Boolean = false
+    private var currentKey: (K, (Iterable[Array[Any]], Iterable[Array[Array[Any]]])) = _
+    private var iterA: Iterator[Array[Any]] = _
+    private var iterB: Array[Array[Any]] = _
+    private var Bcount: Int = Int.MaxValue
+    private var eleA: Array[Any] = _
+
+    // Given iterA and iterB are both sorted, A in descending order, and B in ascending order, for each A, we want to
+    // find the maximum B value, by scanning B from top to bottom.  For the next A value, only smaller B can satisfy
+    // the filter condition, hence we keep moving down.  In addition, all items in A should have query result, otherwise
+    // error will be raised.  The total cost will be O(|A|log(|A|)+|B|).  Better one: using Binary search O(|A|log|B|)
+
+    private def testOutput: Boolean = {
+      while (Bcount >= 0 && !comparisonFunction(iterB(Bcount)(comparison2).asInstanceOf[K1], eleA(comparison1).asInstanceOf[K1])) {
+        Bcount = Bcount-1
+      }
+      if (Bcount >= 0) {
+        val t = constructOutput(apos, bpos, eleA, iterB(Bcount))
+        nextEle = (t(key).asInstanceOf[K], t)
+        true
+      } else {
+        false
+      }
+    }
+
+    override def hasNext: Boolean = {
+      if (nextEle != null) return true
+      if (!initial) {
+        initial = true
+        currentKey = iter.next()
+        iterA = currentKey._2._1.toIterator
+        if (currentKey._2._2.size > 1) throw new Exception("Current B is not unique!")
+        iterB = currentKey._2._2.head
+        eleA = iterA.next()
+        Bcount = iterB.length-1
+        if (!testOutput) throw new Exception("The ele has no output")
+        else true
+      } else {
+        if (iterA.hasNext) {
+            eleA = iterA.next()
+            if (!testOutput) {
+              throw new Exception(s"The ele has no output, ${eleA.mkString("Array(", ", ", ")")}, ${iterB(Bcount).mkString("Array(", ", ", ")")}")
+            }
+            else true
+          } else {
+            if (iter.hasNext) {
+              currentKey = iter.next()
+              iterA = currentKey._2._1.toIterator
+              eleA = iterA.next()
+              iterB = currentKey._2._2.head
+              if (currentKey._2._2.size > 1) throw new Exception("Current B is not unique!")
+              Bcount = iterB.length-1
+              if (!testOutput) throw new Exception("The ele has no output")
+              else true
+            } else {
+              false
+            }
+        }
+      }
+    }
+
+    override def next(): (K, Array[Any]) = {
+      if (nextEle == null) throw new Exception("next ele not set")
+      val t = nextEle
+      nextEle = null
+      t
+    }
+  }
+
   // A customer Iterator for enumerate tree like array.
   class CustomTreeLikeArrayIterator[K : ClassTag, K1, K2](iter : (Iterable[Array[Any]], Iterable[TreeLikeArray[K1, K2]]),
                                              apos : Array[Int],
@@ -680,6 +758,23 @@ class ComparisonJoins extends java.io.Serializable{
                   comparisonFunction : (K1, K1) => Boolean) : RDD[(K, Array[Any])] = {
     RDD1.cogroup(RDD2).filter(x => x._2._1.nonEmpty && x._2._2.nonEmpty).mapPartitions( x => {
       new CustomIterator[K, K1](x, apos, bpos, comparison1, comparison2, key, comparisonFunction)
+    })
+
+  }
+
+  def enumerationWithAnnotation[K: ClassTag, K1](RDD1: RDD[(K, Array[Any])],
+                                                 RDD2: RDD[(K, Array[Array[Any]])],
+                                                 apos: Array[Int],
+                                                 bpos: Array[Int],
+                                                 comparison1: Int,
+                                                 comparison2: Int,
+                                                 key: Int,
+                                                 comparisonFunction: (K1, K1) => Boolean): RDD[(K, Array[Any])] = {
+    RDD1.cogroup(RDD2).filter(x => x._2._1.nonEmpty && x._2._2.nonEmpty).mapPartitions(x => {
+      val y = x.map(i =>
+        (i._1,
+        (i._2._1.toArray.sortWith((a, b) => comparisonFunction(b(comparison1).asInstanceOf[K1], a(comparison1).asInstanceOf[K1])).toIterable, i._2._2)))
+      new CustomAnnotationIterator[K, K1](y, apos, bpos, comparison1, comparison2, key, comparisonFunction)
     })
 
   }
