@@ -60,9 +60,9 @@ object Query10SparkCQC {
     }
 
     val C = new ComparisonJoins()
-    // bag1CoGroup Schema (g1.DST, Array(g1.SRC, g1.DST, c1.CNT)) SortBy c1.CNT increasing
+    // bag1CoGroup Schema (g2.DST, Array(g1.SRC, g1.DST, g2.DST, annotation, c1.CNT)) SortBy c1.CNT increasing
     val bag1CoGroup = bag1.groupByKey.mapValues(x => x.toArray.sortWith((x, y) => smaller(x.last.asInstanceOf[Int], y.last.asInstanceOf[Int])))
-    // bag1Annotation Schema (g1.DST, Array(c1.CNT, Annotation)) SortBy c1.CNT increasing
+    // bag1Annotation Schema (g2.DST, Array(c1.CNT, Annotation)) SortBy c1.CNT increasing
     val bag1Annotation = bag1CoGroup.mapValues(x => {
       var t : Int = 0
       val result = x.map(y => {
@@ -71,7 +71,7 @@ object Query10SparkCQC {
       })
       result
     })
-    // g1Max Schema (g2.DST, c1.CNT)
+    // bag1Max Schema (g2.DST, c1.CNT)
     val bag1Max = C semijoinSortToMax(bag1CoGroup)
     // enum1 Schema g3.SRC, (g3.SRC, g3.DST, C2.CNT)
     val enum1 = C enumeration1 (bag1Max, g3, Array(), Array(0, 1, 2), (1, 0), (2, 2), 0, smaller)
