@@ -785,12 +785,17 @@ class ComparisonJoins extends java.io.Serializable{
                                                  comparison1: Int,
                                                  comparison2: Int,
                                                  key: Int,
-                                                 comparisonFunction: (K1, K1) => Boolean): RDD[(K, Array[Any])] = {
+                                                 comparisonFunction1: (K1, K1) => Boolean, // one for sort, one for enumeration
+                                                 comparisonFunction2: (K1, K1) => Boolean): RDD[(K, Array[Any])] = {
     RDD1.cogroup(RDD2).filter(x => x._2._1.nonEmpty && x._2._2.nonEmpty).mapPartitions(x => {
-      val y = x.map(i =>
-        (i._1,
-        (i._2._1.toArray.sortWith((a, b) => comparisonFunction(b(comparison1).asInstanceOf[K1], a(comparison1).asInstanceOf[K1])).toIterable, i._2._2)))
-      new CustomAnnotationIterator[K, K1](y, apos, bpos, comparison1, comparison2, key, comparisonFunction)
+      if (x.nonEmpty) {
+        val y = x.map(i =>
+          (i._1,
+              (i._2._1.toArray.sortWith((a, b) => comparisonFunction1(b(comparison1).asInstanceOf[K1], a(comparison1).asInstanceOf[K1])).toIterable, i._2._2)))
+        new CustomAnnotationIterator[K, K1](y, apos, bpos, comparison1, comparison2, key, comparisonFunction2)
+      } else {
+        Iterator.empty
+      }
     })
 
   }

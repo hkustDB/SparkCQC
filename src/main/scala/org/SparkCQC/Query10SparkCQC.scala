@@ -6,16 +6,18 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 /**
  * This is a test program for testing the following SQL query over a graph
- * select g2.src, g2.dst, g3.dst, sum(c1.cnt)
+ * select g3.src, g3.dst, count(*)
  * from Graph g1, Graph g2, Graph g3,
  * (select src, count(*) as cnt from Graph group by src) as c1,
  * (select src, count(*) as cnt from Graph group by src) as c2
  * where g1.dst = g2.src and g2.dst = g3.src and g1.src = c1.src
  * and g3.dst = c2.src and c1.cnt < c2.cnt
+ * group by g3.src, g3.dst
  */
 object Query10SparkCQC {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf()
+    conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     conf.setAppName("Query10SparkCQC")
 
     val sc = new SparkContext(conf)
@@ -77,11 +79,12 @@ object Query10SparkCQC {
     val enum1 = C enumeration1 (bag1Max, g3, Array(), Array(0, 1, 2), (1, 0), (2, 2), 0, smaller)
     enum1.cache()
     // enum3 Schema (g3.SRC, g3.DST, annotation)
-    val enum3 = C enumerationWithAnnotation (enum1, bag1Annotation, Array(0, 1), Array(1),  2, 0, 0, smaller)
+    val enum3 = C enumerationWithAnnotation (enum1, bag1Annotation, Array(0, 1), Array(1),  2, 0, 0, smaller, smaller)
     if (ioType != "no_io")
       IOTaskHelper.saveResultAsTextFile(enum3, ioType, saveAsTextFilePath, defaultParallelism)
     else
       spark.time(print(enum3.count()))
+
     println("APP Name :" + spark.sparkContext.appName)
     println("Deploy Mode :" + spark.sparkContext.deployMode)
     println("Master :" + spark.sparkContext.master)

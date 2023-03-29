@@ -16,6 +16,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 object Query9SparkCQC {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf()
+    conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     conf.setAppName("Query9SparkCQC")
 
     val sc = new SparkContext(conf)
@@ -76,18 +77,19 @@ object Query9SparkCQC {
     // g2Max Schema (g2.DST, c1.CNT)
     val g2Max = C semijoinSortToMax(g2CoGroup)
     // enum1 Schema g3.SRC, (g3.SRC, g3.DST, C2.CNT)
-    val enum1 = C enumeration1 (g2Max, g3, Array(), Array(0, 1, 2), (1, 0), (2, 2), 0, smaller)
+    val enum1 = C enumeration1 (g2Max, g3, Array(), Array(0, 1, 2), (1, 0), (2, 2), 0, (x: Int, y: Int) => smaller(x, y - k))
     enum1.cache()
     // enum2 Schema (g2.SRC, (g3.SRC, g3.DST, c2.CNT, g2.SRC))
-    val enum2 = C enumeration (enum1, g2CoGroup, Array(0, 1, 2), Array(0), (2, 2), (1, 2), 3, (x: Int, y: Int) => smaller(x, y))
+    val enum2 = C enumeration (enum1, g2CoGroup, Array(0, 1, 2), Array(0), (2, 2), (1, 2), 3, (x: Int, y: Int) => smaller(x, y - k))
     enum2.cache()
     // enum3 Schema (g3.DST, g3.SRC, g2.SRC, annotation)
     //val enum3 = C enumeration (enum2, g1CoGroup, Array(0, 1, 2, 3), Array(0, 2), (2, 2), (1, 1), 4, (x: Int, y: Int) => smaller(x + k, y))
-    val enum3 = C enumerationWithAnnotation (enum2, g1Annotation, Array(0, 1, 3), Array(1),  2, 0, 0, smaller)
+    val enum3 = C enumerationWithAnnotation (enum2, g1Annotation, Array(0, 1, 3), Array(1),  2, 0, 0, (x: Int, y: Int) => smaller(x, y), (x: Int, y: Int) => smaller(x, y - k))
     if (ioType != "no_io")
       IOTaskHelper.saveResultAsTextFile(enum3, ioType, saveAsTextFilePath, defaultParallelism)
     else
       spark.time(print(enum3.count()))
+
     println("APP Name :" + spark.sparkContext.appName)
     println("Deploy Mode :" + spark.sparkContext.deployMode)
     println("Master :" + spark.sparkContext.master)
