@@ -63,7 +63,7 @@ object Query9SparkCQC {
     val g1Annotation = g1CoGroup.mapValues(x => {
       var t : Int = 0
       val result = x.map(y => {
-        t = t + y(2)
+        t = t + y(2).asInstanceOf[Int]
         Array[Any](y(2), t)
       })
       result
