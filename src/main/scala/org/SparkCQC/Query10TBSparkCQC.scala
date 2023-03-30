@@ -44,11 +44,11 @@ object Query10TBSparkCQC {
     // val g2 = graph1.mapValues(x => Array[Any](x._1, x._2))
     val frequency = graph1.map(edge => (edge._1, 1)).reduceByKey((a, b) => a+b)
     // g1 Schema (g1.DST, (g1.SRC, g1.DST, c1.CNT))
-    val g1 = graph1.join(frequency).map(x => (x._2._1._2, Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
+    val g1 = graph1.join(frequency).map(x => (x._2._1._2.asInstanceOf[Any], Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
     // g2 Schema (g2.DST, (g2.SRC, g2.DST, count(g2))
     val g2 = g1.cache()
     // g3 Schema (g3.SRC, (g3.SRC, g3.DST, c2.CNT))
-    val g3 = graph2.join(frequency).map(x => (x._2._1._1, Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
+    val g3 = graph2.join(frequency).map(x => (x._2._1._1.asInstanceOf[Any], Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
     val n = g2.count()
 
     spark.time(println(g1.count()))

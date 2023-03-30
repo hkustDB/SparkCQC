@@ -499,6 +499,22 @@ class ComparisonJoins extends java.io.Serializable{
     )
   }
 
+  def groupBy[K: ClassTag, K1, K2, K3](RDD1: RDD[(K, Array[Any])],
+                                   comparison1: Int,
+                                   comparison2: Int,
+                                   comparisonFunction1: (K1, K1) => Boolean,
+                                   comparisonFunction2: (K2, K2) => Boolean,
+                                   annotation : Int,
+                                   sumAnnotation : (K3, K3) => K3,
+                                   defaultAnnotation : K3
+                ): RDD[(K, TreeLikeArrayWithAnnotation[K1, K2, K3])] = {
+    RDD1.groupByKey().mapValues(
+      x => new TreeLikeArrayWithAnnotation[K1, K2, K3](x.toArray,
+        comparison1, comparison2,
+        comparisonFunction1, comparisonFunction2, annotation, sumAnnotation, defaultAnnotation)
+    )
+  }
+
   // Getting the minimal value for a sorted list.
   def semijoinSortToMax[K : ClassTag](RDD1 : RDD[(K, Array[Array[Any]])]) : RDD[(K, Array[Any])] = {
     RDD1.mapValues(x => {

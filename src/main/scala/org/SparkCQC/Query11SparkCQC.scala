@@ -59,13 +59,13 @@ object Query11SparkCQC {
 
         val C = new ComparisonJoins()
 
-        val dbbGroup = C.groupBy(dbb, 1, 5, smallerL, largerL).cache()
+        val dbbGroup = C.groupBy(dbb, 1, 5, smallerL, largerL, 4, sumAnnotation, -1000000.00).cache()
         val dbbMax = dbbGroup.mapValues(x => x.toSmall).cache()
         val dbsemiJoin = C.semijoin(dbbMax, dbs, 1, 4, smallerL, largerL).cache()
-        val result = C.enumeration(dbsemiJoin, dbbGroup, Array(0, 1, 2, 3), Array(0, 1, 2, 3), 1, 4, 0)
+        //val result = dbsemiJoin.cogroup(dbbGroup.map)
 
-        val result2 = result.filter(t => (t._2(5).asInstanceOf[Long] + 7776000000L) > t._2(1).asInstanceOf[Long])
-        spark.time(print(result2.count()))
+        //val result2 = result.filter(t => (t._2(5).asInstanceOf[Long] + 7776000000L) > t._2(1).asInstanceOf[Long])
+        //spark.time(print(result2.count()))
 
         println("APP Name :" + spark.sparkContext.appName)
         println("Deploy Mode :" + spark.sparkContext.deployMode)
