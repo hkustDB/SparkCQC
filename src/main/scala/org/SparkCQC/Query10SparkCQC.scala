@@ -46,13 +46,13 @@ object Query10SparkCQC {
     // g1 Schema (g1.DST, (g1.SRC, g1.DST, c1.CNT))
     val g1 = graph1.join(frequency).map(x => (x._2._1._2, Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
     // g3 Schema (g3.SRC, (g3.SRC, g3.DST, c2.CNT))
-    val g3 = graph2.join(frequency).map(x => (x._2._1._1.asInstanceOf[Any], Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
+    val g3 = graph2.join(frequency).map(x => (x._2._1._1.asInstanceOf[Int], Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
     spark.time(println(g1.count()))
     spark.time(println(g2.count()))
     spark.time(println(g3.count()))
 
     // bag1 Schema (g2.DST, (g1.SRC, g1.DST, g2.DST, annotation, c1.CNT))
-    val bag1 = g1.join(g2).map(x => (x._2._2(1), Array[Any](x._2._1(0), x._2._1(1),  x._2._2(1), 1.asInstanceOf[Int], x._2._1(2))))
+    val bag1 = g1.join(g2).map(x => (x._2._2(1).asInstanceOf[Int], Array[Any](x._2._1(0), x._2._1(1),  x._2._2(1), 1.asInstanceOf[Int], x._2._1(2))))
 
     def smaller(x : Int, y : Int) : Boolean = {
       if (x < y) true

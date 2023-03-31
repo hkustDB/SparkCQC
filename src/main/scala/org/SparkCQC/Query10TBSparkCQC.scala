@@ -44,11 +44,11 @@ object Query10TBSparkCQC {
     // val g2 = graph1.mapValues(x => Array[Any](x._1, x._2))
     val frequency = graph1.map(edge => (edge._1, 1)).reduceByKey((a, b) => a+b)
     // g1 Schema (g1.DST, (g1.SRC, g1.DST, c1.CNT))
-    val g1 = graph1.join(frequency).map(x => (x._2._1._2.asInstanceOf[Any], Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
+    val g1 = graph1.join(frequency).map(x => (x._2._1._2.asInstanceOf[Int], Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
     // g2 Schema (g2.DST, (g2.SRC, g2.DST, count(g2))
     val g2 = g1.cache()
     // g3 Schema (g3.SRC, (g3.SRC, g3.DST, c2.CNT))
-    val g3 = graph2.join(frequency).map(x => (x._2._1._1.asInstanceOf[Any], Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
+    val g3 = graph2.join(frequency).map(x => (x._2._1._1.asInstanceOf[Int], Array[Any](x._2._1._1, x._2._1._2, x._2._2))).cache()
     val n = g2.count()
 
     spark.time(println(g1.count()))
@@ -57,12 +57,12 @@ object Query10TBSparkCQC {
 
     // g2l/g2r Schema (g2.DST, (g2.SRC, g2.DST, count(g2))
     val g2l = g2.filter(x => x._2(2).asInstanceOf[Int] <= Math.sqrt(n.toDouble))
-    val g2r = g2.filter(x => x._2.asInstanceOf[Int] > Math.sqrt(n.toDouble))
+    val g2r = g2.filter(x => x._2(2).asInstanceOf[Int] > Math.sqrt(n.toDouble))
 
     // bag1 Schema (g2.DST, (g1.SRC, g1.DST, g2.DST, annotation, c1.CNT))
-    val bag1 = g1.join(g2l).map(x => (x._2._2(1), Array[Any](x._2._1(0), x._2._1(1),  x._2._2(1), 1.asInstanceOf[Int], x._2._1(2))))
+    val bag1 = g1.join(g2l).map(x => (x._2._2(1).asInstanceOf[Int], Array[Any](x._2._1(0), x._2._1(1),  x._2._2(1), 1.asInstanceOf[Int], x._2._1(2))))
     //bag2 Schema (g2.SRC, (g2.SRC, g2.DST, g3.DST, c2.CNT))
-    val bag2 = g2r.join(g3).map(x => (x._2._1(0), Array[Any](x._2._1(0), x._2._1(1), x._2._2(1), x._2._2(2))))
+    val bag2 = g2r.join(g3).map(x => (x._2._1(0).asInstanceOf[Int], Array[Any](x._2._1(0), x._2._1(1), x._2._2(1), x._2._2(2))))
     def smaller(x : Int, y : Int) : Boolean = {
       if (x < y) true
       else false
