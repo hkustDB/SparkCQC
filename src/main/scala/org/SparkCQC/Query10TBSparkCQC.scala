@@ -56,7 +56,7 @@ object Query10TBSparkCQC {
     spark.time(println(g3.count()))
 
     // g2l/g2r Schema (g2.DST, (g2.SRC, g2.DST, count(g2))
-    val g2l = g2.filter(x => x._2(2).asInstanceOf[Int] <= Math.sqrt(n.toDouble))
+    val g2l = g2.filter(x => x._2(2).asInstanceOf[Int] <= Math.sqrt(n.toDouble)).map(x => (x._2(0).asInstanceOf[Int], x._2))
     val g2r = g2.filter(x => x._2(2).asInstanceOf[Int] > Math.sqrt(n.toDouble))
 
     // bag1 Schema (g2.DST, (g1.SRC, g1.DST, g2.DST, annotation, c1.CNT))
