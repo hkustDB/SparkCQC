@@ -33,7 +33,7 @@ object Query11SparkCQC {
 
         val dbb = sc.textFile(s"${path}/tradeB.txt").coalesce(32).map(line => {
             val temp = line.split("\\|")
-            ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble, temp(1)))
+            ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble, temp(1).toLong))
         }).partitionBy(new HashPartitioner(32)).cache()
 
         spark.time(println(dbb.count()))
@@ -61,11 +61,17 @@ object Query11SparkCQC {
 
         val dbbGroup = C.groupBy(dbb, 1, 5, smallerL, largerL, 4, sumAnnotation, -1000000.00).cache()
         val dbbMax = dbbGroup.mapValues(x => x.toSmall).cache()
-        val dbsemiJoin = C.semijoin(dbbMax, dbs, 1, 4, smallerL, largerL).cache()
-        //val result = dbsemiJoin.cogroup(dbbGroup.map)
+        val dbsemiJoin = C.semijoin(dbbMax, dbs, 1, 5, smallerL, largerL).cache()
+        val result = dbsemiJoin.cogroup(dbbGroup).flatMap(
+            x => for {
+                y <- x._2._1
+                result = productAnnotation(y(4).asInstanceOf[Double],
+                    x._2._2.head.findAnnotation(y(1).asInstanceOf[Long], y(5).asInstanceOf[Long]))
 
-        //val result2 = result.filter(t => (t._2(5).asInstanceOf[Long] + 7776000000L) > t._2(1).asInstanceOf[Long])
-        //spark.time(print(result2.count()))
+            } yield (x._1, result))
+
+        val result2 = result.reduceByKey((x, y) => sumAnnotation(x, y))
+        spark.time(print(result2.count()))
 
         println("APP Name :" + spark.sparkContext.appName)
         println("Deploy Mode :" + spark.sparkContext.deployMode)
