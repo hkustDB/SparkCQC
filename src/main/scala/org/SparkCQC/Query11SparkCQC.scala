@@ -6,18 +6,16 @@ import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 
 /**
  * This is a test program for testing the following SQL query
- * SELECT * FROM Trade T1, Trade T2
- * WHERE T1.TT = "BUY" and T2.TT = "SALE"
- * and T1.CA_ID = T2.CA_ID
- * and T1.S_SYBM = T2.S_SYMB
- * and T1.T_DTS <= T2.T_DTS
- * and T1.T_DTS + interval '90' day >= T2.T_DTS
- * and T1.T_TRADE_PRICE*1.2 < T2.T_TRADE_PRICE
+ * SELECT T1.CA_ID, T1.S_SYMB, MAX(T2.T_TRADE_PRICE-T1.T_TRADE_PRICE)
+ * FROM Trade T1, Trade T2
+ * WHERE T1.TT = "BUY" AND T2.TT = "SALE" AND T1.CA_ID = T2.CA_ID AND T1.S_SYBM = T2.S_SYMB
+ * AND T1.T_DTS <= T2.T_DTS AND T1.T_DTS + interval '90' day >= T2.T_DTS
+ * GROUP BY T1.CA_ID, T1.S_SYBM
  */
 object Query11SparkCQC {
     def main(args: Array[String]): Unit = {
         val conf = new SparkConf()
-        conf.setAppName("Query6Comparison")
+        conf.setAppName("Query11SparkCQC")
         val sc = new SparkContext(conf)
 
         val spark = SparkSession.builder.config(sc.getConf).getOrCreate()
@@ -28,12 +26,12 @@ object Query11SparkCQC {
 
         val dbs = sc.textFile(s"${path}/tradeS.txt").coalesce(32).map(line => {
             val temp = line.split("\\|")
-            ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble, temp(1).toLong+7776000000L))
+            ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble, temp(1).toLong))
         }).partitionBy(new HashPartitioner(32)).cache()
 
         val dbb = sc.textFile(s"${path}/tradeB.txt").coalesce(32).map(line => {
             val temp = line.split("\\|")
-            ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble, temp(1).toLong))
+            ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble, temp(1).toLong+7776000000L))
         }).partitionBy(new HashPartitioner(32)).cache()
 
         spark.time(println(dbb.count()))
