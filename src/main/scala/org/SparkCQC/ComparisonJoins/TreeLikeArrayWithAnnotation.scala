@@ -148,9 +148,10 @@ class TreeLikeArrayWithAnnotation[K1, K2, K3] extends java.io.Serializable {
           if (!smaller2(j._1, k2)) {
             break
           }
-          agg = j._2
+          agg = sumAnnotation(agg, j._2)
         }
       }
+      i = i - lowbit(i)
     }
     agg
   }
