@@ -31,7 +31,7 @@ object Query11SparkCQC {
 
         val dbb = sc.textFile(s"${path}/tradeB.txt").coalesce(32).map(line => {
             val temp = line.split("\\|")
-            ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, temp(4).toDouble, temp(1).toLong+7776000000L))
+            ((temp(2), temp(3).toLong), Array(temp(0).toLong, temp(1).toLong, temp(2), temp(3).toLong, -temp(4).toDouble, temp(1).toLong+7776000000L))
         }).partitionBy(new HashPartitioner(32)).cache()
 
         spark.time(println(dbb.count()))
@@ -52,7 +52,7 @@ object Query11SparkCQC {
         }
 
         def productAnnotation(x : Double, y : Double) : Double = {
-            x * y
+            x + y
         }
 
         val C = new ComparisonJoins()

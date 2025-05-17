@@ -97,7 +97,7 @@ class TreeLikeArrayWithAnnotation[K1, K2, K3] extends java.io.Serializable {
         .slice(i-s, i)
         .sortWith((x, y) => smaller2(x(key2).asInstanceOf[K2], y(key2).asInstanceOf[K2]))
       data_large(i) = (tempArray(i-1)(key1).asInstanceOf[K1], sortedArray)
-      var tempagg = new Array[(K2, K3)](tempArray.length+1)
+      var tempagg = new Array[(K2, K3)](sortedArray.length)
       var agg : K3 = defaultAnnotation
       for (j <- sortedArray.indices) {
         agg = sumAnnotation(agg, sortedArray(j)(annotation).asInstanceOf[K3])
